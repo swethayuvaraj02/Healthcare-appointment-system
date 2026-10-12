@@ -1,6 +1,6 @@
-import api from './api';
+﻿import api from './api';
 
-const API_URL = 'http://localhost:3000/api/v1/dashboard';
+const API_URL = '/dashboard';
 
 export interface DashboardStats {
   totalPatients: number;

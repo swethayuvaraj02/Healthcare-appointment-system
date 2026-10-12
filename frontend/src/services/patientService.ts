@@ -1,6 +1,6 @@
-import api from './api';
+﻿import api from './api';
 
-const API_URL = 'http://localhost:3000/api/v1/patients';
+const API_URL = '/patients';
 
 export interface Patient {
   id: number;
