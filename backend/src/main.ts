@@ -35,7 +35,12 @@ app.useGlobalPipes(
   .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api', app, document, {
+  useGlobalPrefix: false,
+  swaggerOptions: {
+    url: '/api-json',
+  },
+});
 
   await app.listen(process.env.PORT ?? 3000);
 
