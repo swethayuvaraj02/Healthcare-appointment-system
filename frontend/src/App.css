@@ -1,0 +1,20 @@
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  background: var(--color-background, #f4f7f6);
+}
+
+.app-content {
+  margin-left: 240px;
+  width: calc(100% - 240px);
+  min-width: 0;
+  box-sizing: border-box;
+  transition:
+    margin-left 0.25s ease,
+    width 0.25s ease;
+}
+
+.app-layout:has(.sidebar.collapsed) .app-content {
+  margin-left: 72px;
+  width: calc(100% - 72px);
+}

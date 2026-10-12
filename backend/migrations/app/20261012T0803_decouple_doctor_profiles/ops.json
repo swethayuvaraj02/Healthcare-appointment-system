@@ -1,0 +1,376 @@
+[
+  {
+    "id": "column.public.doctor.email",
+    "label": "Add column \"email\" to \"doctor\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "email",
+        "table": "doctor"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"email\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "doctor",
+          "email"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"email\"",
+        "sql": "ALTER TABLE \"public\".\"doctor\" ADD COLUMN \"email\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"email\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "doctor",
+          "email"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.doctor.name",
+    "label": "Add column \"name\" to \"doctor\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "name",
+        "table": "doctor"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"name\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "doctor",
+          "name"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"name\"",
+        "sql": "ALTER TABLE \"public\".\"doctor\" ADD COLUMN \"name\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"name\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "doctor",
+          "name"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "data.backfill-doctor-profile",
+    "label": "Copy existing doctor names and emails",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "Doctors need profile data",
+        "sql": "SELECT EXISTS (\n              SELECT 1 FROM \"public\".\"doctor\"\n              WHERE \"name\" IS NULL OR \"email\" IS NULL\n            ) AS ok"
+      }
+    ],
+    "execute": [
+      {
+        "description": "Copy profile data from linked users",
+        "sql": "UPDATE \"public\".\"doctor\" AS d\n              SET \"name\" = u.\"name\", \"email\" = u.\"email\"\n              FROM \"public\".\"user\" AS u\n              WHERE d.\"userId\" = u.\"id\"\n                AND (d.\"name\" IS NULL OR d.\"email\" IS NULL)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "Every doctor has a name and email",
+        "sql": "SELECT NOT EXISTS (\n              SELECT 1 FROM \"public\".\"doctor\"\n              WHERE \"name\" IS NULL OR \"email\" IS NULL\n            ) AS ok"
+      }
+    ]
+  },
+  {
+    "id": "alterNullability.setNotNull.doctor.name",
+    "label": "Set NOT NULL on \"doctor\".\"name\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "name",
+        "table": "doctor"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"name\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "doctor",
+          "name"
+        ]
+      },
+      {
+        "description": "ensure no NULL values in \"name\"",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"public\".\"doctor\" WHERE \"name\" IS NULL) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "set NOT NULL on \"name\"",
+        "sql": "ALTER TABLE \"public\".\"doctor\" ALTER COLUMN \"name\" SET NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"name\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "doctor",
+          "name",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "alterNullability.setNotNull.doctor.email",
+    "label": "Set NOT NULL on \"doctor\".\"email\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "email",
+        "table": "doctor"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"email\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "doctor",
+          "email"
+        ]
+      },
+      {
+        "description": "ensure no NULL values in \"email\"",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"public\".\"doctor\" WHERE \"email\" IS NULL) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "set NOT NULL on \"email\"",
+        "sql": "ALTER TABLE \"public\".\"doctor\" ALTER COLUMN \"email\" SET NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"email\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "doctor",
+          "email",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.doctor.doctor_email_key",
+    "label": "Add unique constraint on \"doctor\" (email)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "doctor_email_key",
+        "table": "doctor"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"doctor_email_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "doctor_email_key",
+          "public",
+          "\"public\".\"doctor\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"doctor_email_key\"",
+        "sql": "ALTER TABLE \"public\".\"doctor\" ADD CONSTRAINT \"doctor_email_key\" UNIQUE (\"email\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"doctor_email_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "doctor_email_key",
+          "public",
+          "\"public\".\"doctor\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropConstraint.doctor.doctor_userId_fkey",
+    "label": "Drop constraint \"doctor_userId_fkey\" on \"doctor\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "doctor_userId_fkey",
+        "table": "doctor"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"doctor_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "doctor_userId_fkey",
+          "public",
+          "\"public\".\"doctor\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop constraint \"doctor_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"doctor\" DROP CONSTRAINT \"doctor_userId_fkey\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"doctor_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "doctor_userId_fkey",
+          "public",
+          "\"public\".\"doctor\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropConstraint.doctor.doctor_userId_key",
+    "label": "Drop constraint \"doctor_userId_key\" on \"doctor\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "doctor_userId_key",
+        "table": "doctor"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"doctor_userId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "doctor_userId_key",
+          "public",
+          "\"public\".\"doctor\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop constraint \"doctor_userId_key\"",
+        "sql": "ALTER TABLE \"public\".\"doctor\" DROP CONSTRAINT \"doctor_userId_key\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"doctor_userId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "doctor_userId_key",
+          "public",
+          "\"public\".\"doctor\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropColumn.doctor.userId",
+    "label": "Drop column \"userId\" from \"doctor\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "userId",
+        "table": "doctor"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"userId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "doctor",
+          "userId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop column \"userId\"",
+        "sql": "ALTER TABLE \"public\".\"doctor\" DROP COLUMN \"userId\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"userId\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "doctor",
+          "userId"
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,65 @@
+// use prisma-8
+
+enum Role {
+  ADMIN
+  DOCTOR
+  STAFF
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(STAFF)
+  createdAt    TimestamptzString @default(now())
+  updatedAt    temporal.updatedAtString()
+}
+
+model Patient {
+  id               Int      @id @default(autoincrement())
+  name             String
+  dateOfBirth      TimestamptzString
+  gender           String
+  phone            String
+  email            String?
+  address          String?
+  emergencyContact String
+  isActive         Boolean  @default(true)
+  createdAt        TimestamptzString @default(now())
+  updatedAt        temporal.updatedAtString()
+  appointments Appointment[]
+}
+
+model Doctor {
+  id             Int      @id @default(autoincrement())
+  name           String
+  email          String   @unique
+  specialization String
+  availability   String?
+  isActive       Boolean  @default(true)
+  createdAt      TimestamptzString @default(now())
+  updatedAt      temporal.updatedAtString()
+  appointments   Appointment[]
+}
+
+model Appointment {
+  id            Int               @id @default(autoincrement())
+  patientId     Int
+  doctorId      Int
+  patient       Patient           @relation(fields: [patientId], references: [id])
+  doctor        Doctor            @relation(fields: [doctorId], references: [id])
+  appointmentAt TimestamptzString
+  status        AppointmentStatus @default(SCHEDULED)
+  reason        String?
+  createdAt     TimestamptzString @default(now())
+  updatedAt     temporal.updatedAtString()
+}
