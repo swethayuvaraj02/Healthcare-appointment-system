@@ -6,10 +6,11 @@ import { AppModule } from './app.module.js';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.enableCors({
+  
+app.enableCors({
   origin: [
     'http://localhost:5173',
-    'https://healthcare-appointment-system-6te99jw3m.vercel.app',
+    'https://healthcare-appointment-system-chi.vercel.app',
   ],
 });
 
