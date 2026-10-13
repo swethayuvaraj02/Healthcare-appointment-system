@@ -1,3 +1,4 @@
+
 import api from './api';
 
 const API_URL = '/appointments';
@@ -56,14 +57,12 @@ export const createAppointment = async (
   patientId: number,
   doctorId: number,
   appointmentAt: string,
-  status: string,
   reason: string,
 ): Promise<Appointment> => {
   const response = await api.post(`${API_URL}/create`, {
     patientId,
     doctorId,
     appointmentAt,
-    status,
     reason,
   });
 

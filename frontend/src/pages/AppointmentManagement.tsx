@@ -225,37 +225,37 @@ function AppointmentManagement() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleCreateAppointment = async () => {
-    if (!validateAppointmentForm()) {
-      return;
-    }
+  
+const handleCreateAppointment = async () => {
+  if (!validateAppointmentForm()) {
+    return;
+  }
 
-    try {
-      setSaving(true);
+  try {
+    setSaving(true);
 
-      await createAppointment(
-        Number(patientId),
-        Number(doctorId),
-        appointmentAt,
-        'SCHEDULED',
-        reason.trim(),
-      );
+    await createAppointment(
+      Number(patientId),
+      Number(doctorId),
+      appointmentAt,
+      reason,
+    );
 
-      setIsAddModalOpen(false);
-      resetForm();
+    setIsAddModalOpen(false);
+    resetForm();
 
+    await loadAppointments();
+  } catch (error: unknown) {
+    console.error('Failed to create appointment:', error);
 
-      await loadAppointments();
-    } catch (error: unknown) {
-      console.error('Failed to create appointment:', error);
+    setFormErrors({
+      general: getErrorMessage(error),
+    });
+  } finally {
+    setSaving(false);
+  }
+};
 
-      setFormErrors({
-        general: getErrorMessage(error),
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleUpdateAppointment = async () => {
     if (!editingAppointment) {
