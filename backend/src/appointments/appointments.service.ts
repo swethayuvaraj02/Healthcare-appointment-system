@@ -6,6 +6,7 @@ import {
 import { db } from '../prisma/db.js';
 import { CreateAppointmentDto } from './dto/create-appointment.dto.js';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto.js';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 type AppointmentStatus =
   | 'SCHEDULED'
@@ -74,8 +75,7 @@ export class AppointmentsService {
       );
     }
 
-    const appointmentStatus: AppointmentStatus =
-      (dto.status ?? 'SCHEDULED') as AppointmentStatus;
+    const appointmentStatus: AppointmentStatus = 'SCHEDULED';
 
     return db.orm.public.Appointment.create({
       patientId: dto.patientId,
@@ -103,7 +103,7 @@ export class AppointmentsService {
   doctorId?: number,
   patientId?: number,
   page = 1,
-  limit = 5,
+  limit = 10,
 ) {
   const appointments = await db.orm.public.Appointment.all();
 
@@ -158,11 +158,19 @@ export class AppointmentsService {
       throw new NotFoundException('Appointment not found');
     }
 
+    if (
+      appointment.status === 'COMPLETED' ||
+      appointment.status === 'CANCELLED'
+    ) {
+      throw new BadRequestException(
+        'Completed or cancelled appointments cannot be edited',
+      );
+    }
+
     const patientId = dto.patientId ?? appointment.patientId;
     const doctorId = dto.doctorId ?? appointment.doctorId;
     const appointmentAt =
       dto.appointmentAt ?? appointment.appointmentAt;
-    const status = dto.status ?? appointment.status;
 
     const patient = await db.orm.public.Patient
       .where({ id: patientId })
@@ -230,9 +238,67 @@ export class AppointmentsService {
       .update({
         patientId,
         doctorId,
-        appointmentAt,
-        status: status as typeof appointment.status,
+        appointmentAt: parsedAppointmentAt.toISOString(),
         reason: dto.reason ?? appointment.reason,
       });
+  }
+  
+  async markCompleted(id: number) {
+    const appointment = await db.orm.public.Appointment
+      .where({ id })
+      .first();
+
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    if (appointment.status !== 'SCHEDULED') {
+      throw new BadRequestException(
+        'Only scheduled appointments can be marked as completed',
+      );
+    }
+
+    return db.orm.public.Appointment
+      .where({ id })
+      .update({
+        status: 'COMPLETED',
+      });
+  }
+
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async cancelOverdueAppointments() {
+    const appointments = await db.orm.public.Appointment.all();
+
+    console.log(
+  '[Scheduler] Checking appointments:',
+  appointments.map((a) => ({
+    id: a.id,
+    status: a.status,
+    appointmentAt: a.appointmentAt,
+  })),
+);
+
+    const cutoff = Date.now() - 5 * 60 * 1000;
+
+    console.log('[Scheduler] Current time:', new Date().toISOString());
+console.log('[Scheduler] Cutoff time:', new Date(cutoff).toISOString());
+
+    for (const appointment of appointments) {
+      const appointmentTime = new Date(
+        appointment.appointmentAt,
+      ).getTime();
+
+      if (
+        appointment.status === 'SCHEDULED' &&
+        Number.isFinite(appointmentTime) &&
+        appointmentTime <= cutoff
+      ) {
+        await db.orm.public.Appointment
+          .where({ id: appointment.id })
+          .update({ status: 'CANCELLED' });
+          
+      }
+    }
   }
 }

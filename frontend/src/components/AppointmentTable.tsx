@@ -36,7 +36,6 @@ function AppointmentTable({
       <table className="appointment-table">
         <thead>
           <tr>
-            <th>ID</th>
             <th>Patient</th>
             <th>Doctor</th>
             <th>Date & Time</th>
@@ -49,7 +48,6 @@ function AppointmentTable({
         <tbody>
           {appointments.map((appointment) => (
             <tr key={appointment.id}>
-              <td>{appointment.id}</td>
 
               <td>{getPatientName(appointment.patientId)}</td>
 

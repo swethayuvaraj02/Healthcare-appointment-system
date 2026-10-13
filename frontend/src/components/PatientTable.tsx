@@ -19,7 +19,6 @@ function PatientTable({
       <table className="patient-table">
         <thead>
           <tr>
-            <th>ID</th>
             <th>Name</th>
             <th>Gender</th>
             <th>Phone</th>
@@ -32,7 +31,6 @@ function PatientTable({
         <tbody>
           {patients.map((patient) => (
             <tr key={patient.id}>
-              <td>{patient.id}</td>
 
               <td>{patient.name}</td>
 

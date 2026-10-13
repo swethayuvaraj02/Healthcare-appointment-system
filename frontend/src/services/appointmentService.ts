@@ -1,4 +1,4 @@
-﻿import api from './api';
+import api from './api';
 
 const API_URL = '/appointments';
 
@@ -30,7 +30,7 @@ export const getAppointments = async (
   doctorId?: number,
   patientId?: number,
   page = 1,
-  limit = 5,
+  limit = 10,
 ): Promise<AppointmentListResponse> => {
   const response = await api.get(API_URL, {
     params: {

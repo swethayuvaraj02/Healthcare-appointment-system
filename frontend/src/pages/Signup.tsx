@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import api from '../services/api.js';
+import { login } from '../services/authService';
 import './Signup.css';
 
 function Signup() {
@@ -16,11 +16,18 @@ function Signup() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     setError('');
 
-    if (!name || !email || !password) {
+    const trimmedName = name.trim();
+    const nameParts = trimmedName.split(/\s+/);
+
+    if (!trimmedName || !email.trim() || !password) {
       setError('Please fill in all fields.');
+      return;
+    }
+
+    if (nameParts.length < 2) {
+      setError('Please enter your full name, including your first and last name.');
       return;
     }
 
@@ -32,23 +39,41 @@ function Signup() {
     try {
       setLoading(true);
 
-      await api.post(
-        '/auth/register',
-        {
-          name,
-          email,
-          password,
-        },
-      );
+      await axios.post(
+  `${import.meta.env.VITE_API_URL}/auth/register`,
+  {
+    name: trimmedName,
+    email: email.trim(),
+    password,
+  },
+);
 
-      navigate('/login');
+const data = await login({
+  email: email.trim(),
+  password,
+});
+
+localStorage.setItem('accessToken', data.accessToken);
+localStorage.setItem('user', JSON.stringify(data.user));
+
+navigate('/dashboard');
     } catch (error) {
       console.error('Signup failed:', error);
 
+if (axios.isAxiosError(error)) {
+  console.error('Request URL:', error.config?.url);
+  console.error('Response status:', error.response?.status);
+  console.error('Response data:', error.response?.data);
+  console.error('Error message:', error.message);
+}
+
       if (axios.isAxiosError(error)) {
+        const message = error.response?.data?.message;
+
         setError(
-          error.response?.data?.message ||
-            'Unable to create account. Please try again.',
+          Array.isArray(message)
+            ? message.join(' ')
+            : message || 'Unable to create account. Please try again.',
         );
       } else {
         setError('Unable to create account. Please try again.');
@@ -63,7 +88,6 @@ function Signup() {
       <div className="signup-card">
         <div className="signup-brand">
           <div className="signup-brand-mark">H</div>
-
           <div>
             <span className="signup-eyebrow">Healthcare Management</span>
             <h1>Create your account</h1>
@@ -77,20 +101,19 @@ function Signup() {
         <form onSubmit={handleSubmit} className="signup-form">
           <div className="form-group">
             <label htmlFor="name">Full name</label>
-
             <input
               id="name"
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Enter your name"
+              placeholder="Enter your full name"
               autoComplete="name"
+              required
             />
           </div>
 
           <div className="form-group">
             <label htmlFor="email">Email address</label>
-
             <input
               id="email"
               type="email"
@@ -98,12 +121,12 @@ function Signup() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Enter your email"
               autoComplete="email"
+              required
             />
           </div>
 
           <div className="form-group">
             <label htmlFor="password">Password</label>
-
             <input
               id="password"
               type="password"
@@ -111,15 +134,16 @@ function Signup() {
               onChange={(event) => setPassword(event.target.value)}
               placeholder="Create a password"
               autoComplete="new-password"
+              minLength={6}
+              required
             />
-
             <span className="password-hint">
               Must be at least 6 characters.
             </span>
           </div>
 
           {error && (
-            <div className="signup-error">
+            <div className="signup-error" role="alert">
               <span className="signup-error-icon">!</span>
               <span>{error}</span>
             </div>

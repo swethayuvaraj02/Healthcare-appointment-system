@@ -28,7 +28,7 @@ function PatientManagement() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalPatients, setTotalPatients] = useState(0);
 
-  const PAGE_SIZE = 5;
+  const PAGE_SIZE = 10;
 
   const [formData, setFormData] = useState({
     name: '',

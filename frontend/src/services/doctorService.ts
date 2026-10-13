@@ -1,4 +1,4 @@
-﻿import api from './api';
+import api from './api';
 
 const API_URL = '/doctors';
 
@@ -26,7 +26,7 @@ export interface DoctorListResponse {
 export const getDoctors = async (
   search?: string,
   page = 1,
-  limit = 5,
+  limit = 10,
 ): Promise<DoctorListResponse> => {
   const response = await api.get(API_URL, {
     params: {

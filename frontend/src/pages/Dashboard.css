@@ -37,22 +37,6 @@
   font-size: 13px;
 }
 
-.dashboard-overview-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 32px;
-  padding: 0 11px;
-  border: 1px solid var(--color-border, #e0e9e7);
-  border-radius: 8px;
-  background: var(--color-surface, #ffffff);
-  color: var(--color-text-muted, #718096);
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-  box-shadow: var(--shadow-card, 0 2px 10px rgb(36 55 70 / 5%));
-}
-
 .overview-dot {
   width: 6px;
   height: 6px;

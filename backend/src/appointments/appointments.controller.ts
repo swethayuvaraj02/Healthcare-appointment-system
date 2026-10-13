@@ -44,7 +44,7 @@ findAll(
   @Query('doctorId') doctorId?: string,
   @Query('patientId') patientId?: string,
   @Query('page') page = '1',
-  @Query('limit') limit = '5',
+  @Query('limit') limit = '10',
 ) {
   return this.appointmentsService.findAll(
     status,
@@ -59,4 +59,11 @@ findAll(
   findOne(@Param('id') id: string) {
     return this.appointmentsService.findOne(Number(id));
   }
+
+  @Roles('ADMIN', 'DOCTOR', 'STAFF')
+  @Post(':id/complete')
+  markCompleted(@Param('id') id: string) {
+    return this.appointmentsService.markCompleted(Number(id));
+  }
+
 }

@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useState } from 'react';
 import AppointmentTable from '../components/AppointmentTable';
 import {
@@ -10,6 +11,54 @@ import { getPatients, type Patient } from '../services/patientService';
 import { getDoctors, type Doctor } from '../services/doctorService';
 import './AppointmentManagement.css';
 
+type AppointmentFormErrors = {
+  patientId?: string;
+  doctorId?: string;
+  appointmentAt?: string;
+  general?: string;
+};
+
+const PAGE_SIZE = 10;
+
+function getErrorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null) {
+    const err = error as {
+      message?: unknown;
+      response?: {
+        data?: {
+          message?: unknown;
+        };
+      };
+    };
+
+    const apiMessage = err.response?.data?.message;
+
+    if (Array.isArray(apiMessage)) {
+      return apiMessage.filter(
+        (message): message is string => typeof message === 'string',
+      ).join(' ');
+    }
+
+    if (typeof apiMessage === 'string') {
+      return apiMessage;
+    }
+
+    if (typeof err.message === 'string') {
+      return err.message;
+    }
+  }
+
+  return 'Something went wrong. Please try again.';
+}
+
+function toLocalDateTimeValue(date: Date): string {
+  const localDate = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60000,
+  );
+
+  return localDate.toISOString().slice(0, 16);
+}
+
 function AppointmentManagement() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -17,14 +66,13 @@ function AppointmentManagement() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<AppointmentFormErrors>({});
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalAppointments, setTotalAppointments] = useState(0);
 
   const [filterStatus, setFilterStatus] = useState('');
-
-  const PAGE_SIZE = 5;
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] =
@@ -35,8 +83,29 @@ function AppointmentManagement() {
   const [patientId, setPatientId] = useState('');
   const [doctorId, setDoctorId] = useState('');
   const [appointmentAt, setAppointmentAt] = useState('');
-  const [status, setStatus] = useState('SCHEDULED');
   const [reason, setReason] = useState('');
+
+  const resetForm = () => {
+    setPatientId('');
+    setDoctorId('');
+    setAppointmentAt('');
+    setReason('');
+    setFormErrors({});
+  };
+
+  const closeAddModal = () => {
+    if (saving) return;
+
+    setIsAddModalOpen(false);
+    resetForm();
+  };
+
+  const closeEditModal = () => {
+    if (saving) return;
+
+    setEditingAppointment(null);
+    resetForm();
+  };
 
   const loadAppointments = useCallback(async () => {
     try {
@@ -125,29 +194,39 @@ function AppointmentManagement() {
     };
   }, []);
 
-  const resetForm = () => {
-    setPatientId('');
-    setDoctorId('');
-    setAppointmentAt('');
-    setStatus('SCHEDULED');
-    setReason('');
-  };
+  const validateAppointmentForm = (): boolean => {
+    const errors: AppointmentFormErrors = {};
 
-  const closeAddModal = () => {
-    setIsAddModalOpen(false);
-    resetForm();
-  };
+    if (!patientId) {
+      errors.patientId = 'Please select a patient.';
+    }
 
-  const closeEditModal = () => {
-    setEditingAppointment(null);
-    resetForm();
+    if (!doctorId) {
+      errors.doctorId = 'Please select a doctor.';
+    }
+
+    if (!appointmentAt) {
+      errors.appointmentAt =
+        'Please enter an appointment date and time.';
+    } else {
+      const selectedDate = new Date(appointmentAt);
+
+      if (Number.isNaN(selectedDate.getTime())) {
+        errors.appointmentAt =
+          'Please enter a valid appointment date and time.';
+      } else if (selectedDate <= new Date()) {
+        errors.appointmentAt =
+          'Appointment date and time must be in the future.';
+      }
+    }
+
+    setFormErrors(errors);
+
+    return Object.keys(errors).length === 0;
   };
 
   const handleCreateAppointment = async () => {
-    if (!patientId || !doctorId || !appointmentAt) {
-      window.alert(
-        'Please select a patient, doctor, and appointment date & time.',
-      );
+    if (!validateAppointmentForm()) {
       return;
     }
 
@@ -158,21 +237,21 @@ function AppointmentManagement() {
         Number(patientId),
         Number(doctorId),
         appointmentAt,
-        status,
+        'SCHEDULED',
         reason.trim(),
       );
 
+      setIsAddModalOpen(false);
+      resetForm();
+
+
       await loadAppointments();
-
-      closeAddModal();
-
-      window.alert('Appointment created successfully.');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to create appointment:', error);
 
-      window.alert(
-        'Failed to create appointment. Please check the details and try again.',
-      );
+      setFormErrors({
+        general: getErrorMessage(error),
+      });
     } finally {
       setSaving(false);
     }
@@ -183,10 +262,7 @@ function AppointmentManagement() {
       return;
     }
 
-    if (!patientId || !doctorId || !appointmentAt) {
-      window.alert(
-        'Please select a patient, doctor, and appointment date & time.',
-      );
+    if (!validateAppointmentForm()) {
       return;
     }
 
@@ -198,21 +274,20 @@ function AppointmentManagement() {
         Number(patientId),
         Number(doctorId),
         appointmentAt,
-        status,
+        editingAppointment.status,
         reason.trim(),
       );
 
+      setEditingAppointment(null);
+      resetForm();
+
       await loadAppointments();
-
-      closeEditModal();
-
-      window.alert('Appointment updated successfully.');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to update appointment:', error);
 
-      window.alert(
-        'Failed to update appointment. Please check the details and try again.',
-      );
+      setFormErrors({
+        general: getErrorMessage(error),
+      });
     } finally {
       setSaving(false);
     }
@@ -220,16 +295,54 @@ function AppointmentManagement() {
 
   const handleEdit = (appointment: Appointment) => {
     setEditingAppointment(appointment);
-
     setPatientId(String(appointment.patientId));
     setDoctorId(String(appointment.doctorId));
 
     setAppointmentAt(
-      new Date(appointment.appointmentAt).toISOString().slice(0, 16),
+      toLocalDateTimeValue(new Date(appointment.appointmentAt)),
     );
 
-    setStatus(appointment.status);
     setReason(appointment.reason || '');
+    setFormErrors({});
+  };
+
+  const handlePatientChange = (value: string) => {
+    setPatientId(value);
+
+    setFormErrors((current) => ({
+      ...current,
+      patientId: undefined,
+      general: undefined,
+    }));
+  };
+
+  const handleDoctorChange = (value: string) => {
+    setDoctorId(value);
+
+    setFormErrors((current) => ({
+      ...current,
+      doctorId: undefined,
+      general: undefined,
+    }));
+  };
+
+  const handleAppointmentDateChange = (value: string) => {
+    setAppointmentAt(value);
+
+    setFormErrors((current) => ({
+      ...current,
+      appointmentAt: undefined,
+      general: undefined,
+    }));
+  };
+
+  const handleReasonChange = (value: string) => {
+    setReason(value);
+
+    setFormErrors((current) => ({
+      ...current,
+      general: undefined,
+    }));
   };
 
   return (
@@ -237,12 +350,15 @@ function AppointmentManagement() {
       <div className="appointment-container">
         <div className="appointment-header">
           <div>
-            <span className="page-eyebrow">APPOINTMENT MANAGEMENT</span>
+            <span className="page-eyebrow">
+              APPOINTMENT MANAGEMENT
+            </span>
             <h1>Appointments</h1>
             <p>Manage patient appointments and schedules.</p>
           </div>
 
           <button
+            type="button"
             className="primary-button"
             onClick={() => {
               resetForm();
@@ -276,9 +392,13 @@ function AppointmentManagement() {
 
         <div className="appointment-content">
           {loading ? (
-            <div className="state-message">Loading appointments...</div>
+            <div className="state-message">
+              Loading appointments...
+            </div>
           ) : appointments.length === 0 ? (
-            <div className="state-message">No appointments found.</div>
+            <div className="state-message">
+              No appointments found.
+            </div>
           ) : (
             <>
               <AppointmentTable
@@ -293,36 +413,39 @@ function AppointmentManagement() {
 
               {totalPages > 1 && (
                 <div className="pagination">
-            <button
-              className="pagination-button"
-              onClick={() =>
-                setPage((currentPage) => currentPage - 1)
-              }
-              disabled={page === 1 || loading}
-            >
-              ← Previous
-            </button>
+                  <button
+                    type="button"
+                    className="pagination-button"
+                    onClick={() =>
+                      setPage((currentPage) => currentPage - 1)
+                    }
+                    disabled={page === 1 || loading}
+                  >
+                    ← Previous
+                  </button>
 
-            <div className="pagination-center">
-              <span className="pagination-page">
-                Page {page} of {totalPages}
-              </span>
-              <span className="pagination-total">
-                {totalAppointments} appointments
-              </span>
-            </div>
+                  <div className="pagination-center">
+                    <span className="pagination-page">
+                      Page {page} of {totalPages}
+                    </span>
 
-            <button
-              className="pagination-button"
-              onClick={() =>
-                setPage((currentPage) => currentPage + 1)
-              }
-              disabled={page === totalPages || loading}
-            >
-              Next →
-            </button>
-          </div>
-        )}
+                    <span className="pagination-total">
+                      {totalAppointments} appointments
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="pagination-button"
+                    onClick={() =>
+                      setPage((currentPage) => currentPage + 1)
+                    }
+                    disabled={page >= totalPages || loading}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -330,17 +453,26 @@ function AppointmentManagement() {
 
       {isAddModalOpen && (
         <div className="modal-overlay">
-          <div className="modal">
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-appointment-title"
+          >
             <div className="modal-header">
               <div>
-                <h2>New Appointment</h2>
+                <h2 id="new-appointment-title">
+                  New Appointment
+                </h2>
                 <p>Schedule a new patient appointment.</p>
               </div>
 
               <button
+                type="button"
                 className="modal-close"
                 onClick={closeAddModal}
                 disabled={saving}
+                aria-label="Close new appointment form"
               >
                 ×
               </button>
@@ -348,14 +480,25 @@ function AppointmentManagement() {
 
             <div className="modal-body">
               <div className="form-group">
-                <label htmlFor="appointment-patient">Patient</label>
+                <label htmlFor="appointment-patient">
+                  Patient
+                </label>
 
                 <select
                   id="appointment-patient"
                   className="form-input"
                   value={patientId}
-                  onChange={(event) => setPatientId(event.target.value)}
+                  onChange={(event) =>
+                    handlePatientChange(event.target.value)
+                  }
                   disabled={saving}
+                  required
+                  aria-invalid={Boolean(formErrors.patientId)}
+                  aria-describedby={
+                    formErrors.patientId
+                      ? 'appointment-patient-error'
+                      : undefined
+                  }
                 >
                   <option value="">Select patient</option>
 
@@ -365,17 +508,38 @@ function AppointmentManagement() {
                     </option>
                   ))}
                 </select>
+
+                {formErrors.patientId && (
+                  <p
+                    id="appointment-patient-error"
+                    className="field-error"
+                    role="alert"
+                  >
+                    {formErrors.patientId}
+                  </p>
+                )}
               </div>
 
               <div className="form-group">
-                <label htmlFor="appointment-doctor">Doctor</label>
+                <label htmlFor="appointment-doctor">
+                  Doctor
+                </label>
 
                 <select
                   id="appointment-doctor"
                   className="form-input"
                   value={doctorId}
-                  onChange={(event) => setDoctorId(event.target.value)}
+                  onChange={(event) =>
+                    handleDoctorChange(event.target.value)
+                  }
                   disabled={saving}
+                  required
+                  aria-invalid={Boolean(formErrors.doctorId)}
+                  aria-describedby={
+                    formErrors.doctorId
+                      ? 'appointment-doctor-error'
+                      : undefined
+                  }
                 >
                   <option value="">Select doctor</option>
 
@@ -388,10 +552,22 @@ function AppointmentManagement() {
                       </option>
                     ))}
                 </select>
+
+                {formErrors.doctorId && (
+                  <p
+                    id="appointment-doctor-error"
+                    className="field-error"
+                    role="alert"
+                  >
+                    {formErrors.doctorId}
+                  </p>
+                )}
               </div>
 
               <div className="form-group">
-                <label htmlFor="appointment-date">Date &amp; Time</label>
+                <label htmlFor="appointment-date">
+                  Date &amp; Time
+                </label>
 
                 <input
                   id="appointment-date"
@@ -399,32 +575,34 @@ function AppointmentManagement() {
                   className="form-input"
                   value={appointmentAt}
                   onChange={(event) =>
-                    setAppointmentAt(event.target.value)
+                    handleAppointmentDateChange(event.target.value)
                   }
+                 min={toLocalDateTimeValue(new Date())}
                   disabled={saving}
+                  required
+                  aria-invalid={Boolean(formErrors.appointmentAt)}
+                  aria-describedby={
+                    formErrors.appointmentAt
+                      ? 'appointment-date-error'
+                      : undefined
+                  }
                 />
+
+                {formErrors.appointmentAt && (
+                  <p
+                    id="appointment-date-error"
+                    className="field-error"
+                    role="alert"
+                  >
+                    {formErrors.appointmentAt}
+                  </p>
+                )}
               </div>
 
               <div className="form-group">
-                <label htmlFor="appointment-status">Status</label>
-
-                <select
-                  id="appointment-status"
-                  className="form-input"
-                  value={status}
-                  onChange={(event) => setStatus(event.target.value)}
-                  disabled={saving}
-                >
-                  <option value="SCHEDULED">Scheduled</option>
-                  <option value="CONFIRMED">Confirmed</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="CANCELLED">Cancelled</option>
-                  <option value="NO_SHOW">No Show</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="appointment-reason">Reason</label>
+                <label htmlFor="appointment-reason">
+                  Reason
+                </label>
 
                 <textarea
                   id="appointment-reason"
@@ -432,10 +610,21 @@ function AppointmentManagement() {
                   placeholder="Enter appointment reason"
                   rows={3}
                   value={reason}
-                  onChange={(event) => setReason(event.target.value)}
+                  onChange={(event) =>
+                    handleReasonChange(event.target.value)
+                  }
                   disabled={saving}
                 />
               </div>
+
+              {formErrors.general && (
+                <div
+                  className="form-feedback form-feedback-error"
+                  role="alert"
+                >
+                  {formErrors.general}
+                </div>
+              )}
 
               <div className="modal-actions">
                 <button
@@ -463,16 +652,25 @@ function AppointmentManagement() {
 
       {selectedAppointment && (
         <div className="modal-overlay">
-          <div className="modal appointment-details-modal">
+          <div
+            className="modal appointment-details-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="appointment-details-title"
+          >
             <div className="modal-header">
               <div>
-                <h2>Appointment Details</h2>
+                <h2 id="appointment-details-title">
+                  Appointment Details
+                </h2>
                 <p>View appointment information.</p>
               </div>
 
               <button
+                type="button"
                 className="modal-close"
                 onClick={() => setSelectedAppointment(null)}
+                aria-label="Close appointment details"
               >
                 ×
               </button>
@@ -480,7 +678,9 @@ function AppointmentManagement() {
 
             <div className="details-list">
               <div className="details-item">
-                <span className="details-label">Appointment ID</span>
+                <span className="details-label">
+                  Appointment ID
+                </span>
                 <span className="details-value">
                   {selectedAppointment.id}
                 </span>
@@ -492,7 +692,8 @@ function AppointmentManagement() {
                   {patients.find(
                     (patient) =>
                       patient.id === selectedAppointment.patientId,
-                  )?.name || `Patient #${selectedAppointment.patientId}`}
+                  )?.name ||
+                    `Patient #${selectedAppointment.patientId}`}
                 </span>
               </div>
 
@@ -502,12 +703,15 @@ function AppointmentManagement() {
                   {doctors.find(
                     (doctor) =>
                       doctor.id === selectedAppointment.doctorId,
-                  )?.name || `Doctor #${selectedAppointment.doctorId}`}
+                  )?.name ||
+                    `Doctor #${selectedAppointment.doctorId}`}
                 </span>
               </div>
 
               <div className="details-item">
-                <span className="details-label">Date &amp; Time</span>
+                <span className="details-label">
+                  Date &amp; Time
+                </span>
                 <span className="details-value">
                   {new Date(
                     selectedAppointment.appointmentAt,
@@ -542,17 +746,26 @@ function AppointmentManagement() {
 
       {editingAppointment && (
         <div className="modal-overlay">
-          <div className="modal">
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-appointment-title"
+          >
             <div className="modal-header">
               <div>
-                <h2>Edit Appointment</h2>
+                <h2 id="edit-appointment-title">
+                  Edit Appointment
+                </h2>
                 <p>Update appointment information.</p>
               </div>
 
               <button
+                type="button"
                 className="modal-close"
                 onClick={closeEditModal}
                 disabled={saving}
+                aria-label="Close edit appointment form"
               >
                 ×
               </button>
@@ -560,14 +773,25 @@ function AppointmentManagement() {
 
             <div className="modal-body">
               <div className="form-group">
-                <label htmlFor="edit-appointment-patient">Patient</label>
+                <label htmlFor="edit-appointment-patient">
+                  Patient
+                </label>
 
                 <select
                   id="edit-appointment-patient"
                   className="form-input"
                   value={patientId}
-                  onChange={(event) => setPatientId(event.target.value)}
+                  onChange={(event) =>
+                    handlePatientChange(event.target.value)
+                  }
                   disabled={saving}
+                  required
+                  aria-invalid={Boolean(formErrors.patientId)}
+                  aria-describedby={
+                    formErrors.patientId
+                      ? 'edit-appointment-patient-error'
+                      : undefined
+                  }
                 >
                   <option value="">Select patient</option>
 
@@ -577,17 +801,38 @@ function AppointmentManagement() {
                     </option>
                   ))}
                 </select>
+
+                {formErrors.patientId && (
+                  <p
+                    id="edit-appointment-patient-error"
+                    className="field-error"
+                    role="alert"
+                  >
+                    {formErrors.patientId}
+                  </p>
+                )}
               </div>
 
               <div className="form-group">
-                <label htmlFor="edit-appointment-doctor">Doctor</label>
+                <label htmlFor="edit-appointment-doctor">
+                  Doctor
+                </label>
 
                 <select
                   id="edit-appointment-doctor"
                   className="form-input"
                   value={doctorId}
-                  onChange={(event) => setDoctorId(event.target.value)}
+                  onChange={(event) =>
+                    handleDoctorChange(event.target.value)
+                  }
                   disabled={saving}
+                  required
+                  aria-invalid={Boolean(formErrors.doctorId)}
+                  aria-describedby={
+                    formErrors.doctorId
+                      ? 'edit-appointment-doctor-error'
+                      : undefined
+                  }
                 >
                   <option value="">Select doctor</option>
 
@@ -600,10 +845,22 @@ function AppointmentManagement() {
                       </option>
                     ))}
                 </select>
+
+                {formErrors.doctorId && (
+                  <p
+                    id="edit-appointment-doctor-error"
+                    className="field-error"
+                    role="alert"
+                  >
+                    {formErrors.doctorId}
+                  </p>
+                )}
               </div>
 
               <div className="form-group">
-                <label htmlFor="edit-appointment-date">Date &amp; Time</label>
+                <label htmlFor="edit-appointment-date">
+                  Date &amp; Time
+                </label>
 
                 <input
                   id="edit-appointment-date"
@@ -611,32 +868,34 @@ function AppointmentManagement() {
                   className="form-input"
                   value={appointmentAt}
                   onChange={(event) =>
-                    setAppointmentAt(event.target.value)
+                    handleAppointmentDateChange(event.target.value)
                   }
+                  min={toLocalDateTimeValue(new Date())}
                   disabled={saving}
+                  required
+                  aria-invalid={Boolean(formErrors.appointmentAt)}
+                  aria-describedby={
+                    formErrors.appointmentAt
+                      ? 'edit-appointment-date-error'
+                      : undefined
+                  }
                 />
+
+                {formErrors.appointmentAt && (
+                  <p
+                    id="edit-appointment-date-error"
+                    className="field-error"
+                    role="alert"
+                  >
+                    {formErrors.appointmentAt}
+                  </p>
+                )}
               </div>
 
               <div className="form-group">
-                <label htmlFor="edit-appointment-status">Status</label>
-
-                <select
-                  id="edit-appointment-status"
-                  className="form-input"
-                  value={status}
-                  onChange={(event) => setStatus(event.target.value)}
-                  disabled={saving}
-                >
-                  <option value="SCHEDULED">Scheduled</option>
-                  <option value="CONFIRMED">Confirmed</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="CANCELLED">Cancelled</option>
-                  <option value="NO_SHOW">No Show</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edit-appointment-reason">Reason</label>
+                <label htmlFor="edit-appointment-reason">
+                  Reason
+                </label>
 
                 <textarea
                   id="edit-appointment-reason"
@@ -644,10 +903,21 @@ function AppointmentManagement() {
                   placeholder="Enter appointment reason"
                   rows={3}
                   value={reason}
-                  onChange={(event) => setReason(event.target.value)}
+                  onChange={(event) =>
+                    handleReasonChange(event.target.value)
+                  }
                   disabled={saving}
                 />
               </div>
+
+              {formErrors.general && (
+                <div
+                  className="form-feedback form-feedback-error"
+                  role="alert"
+                >
+                  {formErrors.general}
+                </div>
+              )}
 
               <div className="modal-actions">
                 <button

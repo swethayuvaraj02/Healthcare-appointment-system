@@ -2,139 +2,139 @@ import { db } from './prisma/db.js';
 
 const appointments = [
   {
-    patientIndex: 0,
-    doctorIndex: 0,
+    patientEmail: 'priya.sharma@example.com',
+    doctorEmail: 'jane.smith@example.com',
     appointmentAt: '2026-10-06T10:00:00+05:30',
     status: 'CONFIRMED',
     reason: 'Routine cardiac consultation',
   },
   {
-    patientIndex: 1,
-    doctorIndex: 1,
+    patientEmail: 'rahul.menon@example.com',
+    doctorEmail: 'michael.joseph@example.com',
     appointmentAt: '2026-10-06T11:00:00+05:30',
     status: 'SCHEDULED',
     reason: 'Skin consultation',
   },
   {
-    patientIndex: 2,
-    doctorIndex: 2,
+    patientEmail: 'ananya.krishnan@example.com',
+    doctorEmail: 'sneha.rao@example.com',
     appointmentAt: '2026-10-06T12:00:00+05:30',
     status: 'COMPLETED',
     reason: 'Child health checkup',
   },
   {
-    patientIndex: 3,
-    doctorIndex: 3,
+    patientEmail: 'vikram.raj@example.com',
+    doctorEmail: 'arvind.kumar@example.com',
     appointmentAt: '2026-10-07T10:30:00+05:30',
     status: 'CONFIRMED',
     reason: 'Knee pain assessment',
   },
   {
-    patientIndex: 4,
-    doctorIndex: 4,
+    patientEmail: 'meera.nair@example.com',
+    doctorEmail: 'neha.kapoor@example.com',
     appointmentAt: '2026-10-07T14:00:00+05:30',
     status: 'SCHEDULED',
     reason: 'Neurological consultation',
   },
   {
-    patientIndex: 5,
-    doctorIndex: 0,
+    patientEmail: 'karthik.s@example.com',
+    doctorEmail: 'jane.smith@example.com',
     appointmentAt: '2026-10-08T09:30:00+05:30',
     status: 'COMPLETED',
     reason: 'Follow-up consultation',
   },
   {
-    patientIndex: 6,
-    doctorIndex: 1,
+    patientEmail: 'divya.ramesh@example.com',
+    doctorEmail: 'michael.joseph@example.com',
     appointmentAt: '2026-10-08T11:30:00+05:30',
     status: 'CANCELLED',
     reason: 'Dermatology follow-up',
   },
   {
-    patientIndex: 7,
-    doctorIndex: 2,
+    patientEmail: 'sanjay.kumar@example.com',
+    doctorEmail: 'sneha.rao@example.com',
     appointmentAt: '2026-10-08T15:00:00+05:30',
     status: 'SCHEDULED',
     reason: 'Pediatric consultation',
   },
   {
-    patientIndex: 8,
-    doctorIndex: 3,
+    patientEmail: 'lakshmi.devi@example.com',
+    doctorEmail: 'arvind.kumar@example.com',
     appointmentAt: '2026-10-09T10:00:00+05:30',
     status: 'CONFIRMED',
     reason: 'Back pain consultation',
   },
   {
-    patientIndex: 9,
-    doctorIndex: 4,
+    patientEmail: 'arjun.prakash@example.com',
+    doctorEmail: 'neha.kapoor@example.com',
     appointmentAt: '2026-10-09T13:00:00+05:30',
     status: 'NO_SHOW',
     reason: 'Migraine consultation',
   },
   {
-    patientIndex: 10,
-    doctorIndex: 0,
+    patientEmail: 'nisha.thomas@example.com',
+    doctorEmail: 'jane.smith@example.com',
     appointmentAt: '2026-10-10T09:00:00+05:30',
     status: 'SCHEDULED',
     reason: 'Cardiac follow-up',
   },
   {
-    patientIndex: 11,
-    doctorIndex: 1,
+    patientEmail: 'rohan.iyer@example.com',
+    doctorEmail: 'michael.joseph@example.com',
     appointmentAt: '2026-10-10T11:00:00+05:30',
     status: 'COMPLETED',
     reason: 'Skin allergy consultation',
   },
   {
-    patientIndex: 0,
-    doctorIndex: 2,
+    patientEmail: 'priya.sharma@example.com',
+    doctorEmail: 'sneha.rao@example.com',
     appointmentAt: '2026-10-11T10:30:00+05:30',
     status: 'CONFIRMED',
     reason: 'Child vaccination consultation',
   },
   {
-    patientIndex: 1,
-    doctorIndex: 3,
+    patientEmail: 'rahul.menon@example.com',
+    doctorEmail: 'arvind.kumar@example.com',
     appointmentAt: '2026-10-11T14:30:00+05:30',
     status: 'SCHEDULED',
     reason: 'Joint pain assessment',
   },
   {
-    patientIndex: 2,
-    doctorIndex: 4,
+    patientEmail: 'ananya.krishnan@example.com',
+    doctorEmail: 'neha.kapoor@example.com',
     appointmentAt: '2026-10-12T09:30:00+05:30',
     status: 'COMPLETED',
     reason: 'Neurology follow-up',
   },
   {
-    patientIndex: 3,
-    doctorIndex: 1,
+    patientEmail: 'vikram.raj@example.com',
+    doctorEmail: 'michael.joseph@example.com',
     appointmentAt: '2026-10-12T11:30:00+05:30',
     status: 'SCHEDULED',
     reason: 'General dermatology consultation',
   },
   {
-    patientIndex: 4,
-    doctorIndex: 2,
+    patientEmail: 'meera.nair@example.com',
+    doctorEmail: 'sneha.rao@example.com',
     appointmentAt: '2026-10-13T10:00:00+05:30',
     status: 'CONFIRMED',
     reason: 'Pediatric health review',
   },
   {
-    patientIndex: 5,
-    doctorIndex: 3,
+    patientEmail: 'karthik.s@example.com',
+    doctorEmail: 'arvind.kumar@example.com',
     appointmentAt: '2026-10-13T13:30:00+05:30',
     status: 'CANCELLED',
     reason: 'Orthopedic follow-up',
   },
   {
-    patientIndex: 6,
-    doctorIndex: 4,
+    patientEmail: 'divya.ramesh@example.com',
+    doctorEmail: 'neha.kapoor@example.com',
     appointmentAt: '2026-10-14T15:00:00+05:30',
     status: 'SCHEDULED',
     reason: 'Neurological assessment',
   },
-];
+] as const;
 
 async function seedAppointments() {
   const patients = await db.orm.public.Patient.all();
@@ -145,22 +145,29 @@ async function seedAppointments() {
   let skipped = 0;
 
   for (const appointment of appointments) {
-    const patient = patients[appointment.patientIndex];
-    const doctor = doctors[appointment.doctorIndex];
+    const patient = patients.find(
+      (item) => item.email === appointment.patientEmail,
+    );
+
+    const doctor = doctors.find(
+      (item) => item.email === appointment.doctorEmail,
+    );
 
     if (!patient || !doctor) {
       console.log(
-        `Skipping appointment: patientIndex=${appointment.patientIndex}, doctorIndex=${appointment.doctorIndex}`,
+        `Skipped: patient=${appointment.patientEmail}, doctor=${appointment.doctorEmail} — record not found.`,
       );
+      skipped++;
       continue;
     }
+
+    const appointmentTime = new Date(appointment.appointmentAt).getTime();
 
     const alreadyExists = existingAppointments.some(
       (existing) =>
         existing.patientId === patient.id &&
         existing.doctorId === doctor.id &&
-        new Date(existing.appointmentAt).getTime() ===
-          new Date(appointment.appointmentAt).getTime(),
+        new Date(existing.appointmentAt).getTime() === appointmentTime,
     );
 
     if (alreadyExists) {
@@ -168,24 +175,21 @@ async function seedAppointments() {
       continue;
     }
 
-    await db.orm.public.Appointment.create({
+    const createdAppointment = await db.orm.public.Appointment.create({
       patientId: patient.id,
       doctorId: doctor.id,
       appointmentAt: appointment.appointmentAt,
-      status: appointment.status as
-        | 'SCHEDULED'
-        | 'CONFIRMED'
-        | 'COMPLETED'
-        | 'CANCELLED'
-        | 'NO_SHOW',
+      status: appointment.status,
       reason: appointment.reason,
     });
 
+    existingAppointments.push(createdAppointment);
     created++;
+
   }
 
   console.log(`Created ${created} sample appointments.`);
-  console.log(`Skipped ${skipped} existing appointments.`);
+  console.log(`Skipped ${skipped} existing or unmatched appointments.`);
 }
 
 await seedAppointments();

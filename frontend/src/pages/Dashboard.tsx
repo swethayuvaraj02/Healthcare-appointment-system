@@ -101,7 +101,6 @@ function Dashboard() {
 
   return (
     <div className="dashboard-page">
-      {/* Header */}
 
       <div className="dashboard-header">
         <div>
@@ -116,13 +115,12 @@ function Dashboard() {
           </p>
         </div>
 
-        <div className="dashboard-overview-badge">
-          <span className="overview-dot" />
-          System Overview
-        </div>
-      </div>
-
-      {/* Stats */}
+       <div className="dashboard-overview-card">
+  <div className="overview-card-icon">
+    <span className="overview-dot" />
+  </div>
+   </div>
+  </div>
 
       <div className="dashboard-stats">
         <div className="dashboard-card patients-card">
@@ -180,8 +178,6 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Appointment Overview */}
-
       <div className="dashboard-section appointment-overview">
         <div className="section-header">
           <div>
@@ -230,8 +226,6 @@ function Dashboard() {
           })}
         </div>
       </div>
-
-      {/* Upcoming Appointments */}
 
       <div className="dashboard-section upcoming-section">
         <div className="section-header">

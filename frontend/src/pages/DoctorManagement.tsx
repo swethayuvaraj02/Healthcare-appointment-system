@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useState, type ChangeEvent } from 'react';
+
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type ChangeEvent,
+} from 'react';
+
 import DoctorTable from '../components/DoctorTable';
+
 import {
   createDoctor,
   deactivateDoctor,
@@ -8,79 +16,169 @@ import {
   updateDoctor,
   type Doctor,
 } from '../services/doctorService';
+
 import './DoctorManagement.css';
 
-function DoctorManagement() {
+const PAGE_SIZE = 10;
+
+type DoctorFormErrors = {
+  name?: string;
+  email?: string;
+  specialization?: string;
+  general?: string;
+};
+
+function getErrorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null) {
+    const err = error as {
+      message?: unknown;
+      response?: {
+        data?: {
+          message?: unknown;
+        };
+      };
+    };
+
+    const apiMessage = err.response?.data?.message;
+
+    if (Array.isArray(apiMessage)) {
+      return apiMessage
+        .filter(
+          (message): message is string =>
+            typeof message === 'string',
+        )
+        .join(' ');
+    }
+
+    if (typeof apiMessage === 'string') {
+      return apiMessage;
+    }
+
+    if (typeof err.message === 'string') {
+      return err.message;
+    }
+  }
+
+  return 'Something went wrong. Please try again.';
+}
+
+function validateDoctorFields(
+  name: string,
+  email: string,
+  specialization: string,
+): DoctorFormErrors {
+  const errors: DoctorFormErrors = {};
+
+  if (!name.trim()) {
+    errors.name = 'Please enter the doctor name.';
+  }
+
+  if (!email.trim()) {
+    errors.email = 'Please enter the email address.';
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    errors.email = 'Please enter a valid email address.';
+  }
+
+  if (!specialization.trim()) {
+    errors.specialization =
+      'Please enter the doctor specialization.';
+  }
+
+  return errors;
+}
+
+export default function DoctorManagement() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [search, setSearch] = useState('');
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pageError, setPageError] = useState('');
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalDoctors, setTotalDoctors] = useState(0);
 
-  const PAGE_SIZE = 5;
+  const [selectedDoctor, setSelectedDoctor] =
+    useState<Doctor | null>(null);
 
-  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
-  const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
+  const [editingDoctor, setEditingDoctor] =
+    useState<Doctor | null>(null);
+
   const [showAddForm, setShowAddForm] = useState(false);
-  const [doctorToDeactivate, setDoctorToDeactivate] = useState<number | null>(
-    null,
-  );
+
+  const [doctorToDeactivate, setDoctorToDeactivate] =
+    useState<Doctor | null>(null);
 
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newSpecialization, setNewSpecialization] = useState('');
   const [newAvailability, setNewAvailability] = useState('');
 
+  const [formErrors, setFormErrors] =
+    useState<DoctorFormErrors>({});
+
   const loadDoctors = useCallback(async () => {
     setLoading(true);
+    setPageError('');
 
     try {
       const data = await getDoctors(search, page, PAGE_SIZE);
 
       setDoctors(data.data);
-      setTotalPages(data.pagination.totalPages);
+      setTotalPages(Math.max(1, data.pagination.totalPages));
       setTotalDoctors(data.pagination.total);
     } catch (error) {
       console.error('Failed to fetch doctors:', error);
+      setPageError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
   }, [search, page]);
 
   useEffect(() => {
-    let isMounted = true;
+  const timeoutId = window.setTimeout(() => {
+    void loadDoctors();
+  }, 0);
 
-    const fetchDoctors = async () => {
-      setLoading(true);
+  return () => {
+    window.clearTimeout(timeoutId);
+  };
+}, [loadDoctors]);
 
-      try {
-        const data = await getDoctors(search, page, PAGE_SIZE);
+  const handleSearchChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    setSearch(event.target.value);
+    setPage(1);
+  };
 
-        if (!isMounted) {
-          return;
-        }
+  const resetAddForm = () => {
+    setNewName('');
+    setNewEmail('');
+    setNewSpecialization('');
+    setNewAvailability('');
+    setFormErrors({});
+  };
 
-        setDoctors(data.data);
-        setTotalPages(data.pagination.totalPages);
-        setTotalDoctors(data.pagination.total);
-      } catch (error) {
-        console.error('Failed to fetch doctors:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
+  const openAddModal = () => {
+    resetAddForm();
+    setShowAddForm(true);
+  };
 
-    void fetchDoctors();
+  const closeAddModal = () => {
+    if (saving) return;
 
-    return () => {
-      isMounted = false;
-    };
-  }, [search, page]);
+    setShowAddForm(false);
+    resetAddForm();
+  };
+
+  const closeEditModal = () => {
+    if (saving) return;
+
+    setEditingDoctor(null);
+    setFormErrors({});
+  };
 
   const handleView = async (id: number) => {
     try {
@@ -88,88 +186,68 @@ function DoctorManagement() {
       setSelectedDoctor(doctor);
     } catch (error) {
       console.error('Failed to fetch doctor:', error);
-      window.alert('Failed to load doctor details.');
+      setPageError(
+        'Failed to load doctor details. Please try again.',
+      );
     }
   };
 
-  const handleEdit = (doctor: Doctor) => {
-    setEditingDoctor({ ...doctor });
-  };
+  const handleCreateDoctor = async () => {
+    const errors = validateDoctorFields(
+      newName,
+      newEmail,
+      newSpecialization,
+    );
 
-  const handleDeactivate = (id: number) => {
-    setDoctorToDeactivate(id);
-  };
+    setFormErrors(errors);
 
-  const confirmDeactivate = async () => {
-    if (doctorToDeactivate === null) {
+    if (Object.keys(errors).length > 0) {
       return;
     }
 
     try {
       setSaving(true);
 
-      await deactivateDoctor(doctorToDeactivate);
-      await loadDoctors();
+      await createDoctor(
+        newName.trim(),
+        newEmail.trim(),
+        newSpecialization.trim(),
+        newAvailability.trim(),
+      );
 
-      if (selectedDoctor?.id === doctorToDeactivate) {
-        setSelectedDoctor(null);
+      setShowAddForm(false);
+      resetAddForm();
+
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        await loadDoctors();
       }
-
-      setDoctorToDeactivate(null);
     } catch (error) {
-      console.error('Failed to deactivate doctor:', error);
-      window.alert('Failed to deactivate doctor.');
+      console.error('Failed to create doctor:', error);
+
+      setFormErrors({
+        general: getErrorMessage(error),
+      });
     } finally {
       setSaving(false);
     }
   };
-
-  const handleSearch = (event: ChangeEvent<HTMLInputElement>) => {
-    setSearch(event.target.value);
-    setPage(1);
-  };
-
-  const handleCreateDoctor = async () => {
-  if (
-    !newName.trim() ||
-    !newEmail.trim() ||
-    !newSpecialization.trim()
-  ) {
-    alert('Please fill in all required fields.');
-    return;
-  }
-
-  try {
-    await createDoctor(
-      newName.trim(),
-      newEmail.trim(),
-      newSpecialization.trim(),
-      newAvailability.trim(),
-    );
-
-    await loadDoctors();
-    setNewName('');
-    setNewEmail('');
-    setNewSpecialization('');
-    setNewAvailability('');
-    setShowAddForm(false);
-  } catch (error) {
-    console.error('Failed to create doctor:', error);
-    alert('Failed to create doctor. Please check the details and try again.');
-  }
-};
 
   const handleUpdateDoctor = async () => {
     if (!editingDoctor) {
       return;
     }
 
-    if (
-      !editingDoctor.name?.trim() ||
-      !editingDoctor.email?.trim() ||
-      !editingDoctor.specialization.trim()
-    ) {
-      window.alert('Name, email, and specialization are required.');
+    const errors = validateDoctorFields(
+      editingDoctor.name,
+      editingDoctor.email,
+      editingDoctor.specialization,
+    );
+
+    setFormErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
       return;
     }
 
@@ -181,17 +259,50 @@ function DoctorManagement() {
         editingDoctor.name.trim(),
         editingDoctor.email.trim(),
         editingDoctor.specialization.trim(),
-        editingDoctor.availability?.trim() || '',
+        editingDoctor.availability?.trim() ?? '',
       );
 
-      await loadDoctors();
       setEditingDoctor(null);
+      setFormErrors({});
+
+      await loadDoctors();
     } catch (error) {
       console.error('Failed to update doctor:', error);
-      window.alert('Failed to update doctor.');
+
+      setFormErrors({
+        general: getErrorMessage(error),
+      });
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeactivateDoctor = async () => {
+    if (!doctorToDeactivate) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      await deactivateDoctor(doctorToDeactivate.id);
+
+      setDoctorToDeactivate(null);
+      setSelectedDoctor(null);
+
+      await loadDoctors();
+    } catch (error) {
+      console.error('Failed to deactivate doctor:', error);
+
+      setPageError(getErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEdit = (doctor: Doctor) => {
+    setEditingDoctor({ ...doctor });
+    setFormErrors({});
   };
 
   return (
@@ -199,14 +310,22 @@ function DoctorManagement() {
       <div className="doctor-container">
         <div className="doctor-header">
           <div>
-            <span className="page-eyebrow">DOCTOR MANAGEMENT</span>
-            <h1>Doctors</h1>
-            <p>Manage doctors, specializations, and availability.</p>
+            <span className="page-eyebrow">
+              DOCTOR MANAGEMENT
+            </span>
+
+            <h1>Doctor Management</h1>
+
+            <p>
+              Manage doctors and their availability.
+            </p>
           </div>
 
           <button
+            type="button"
             className="primary-button"
-            onClick={() => setShowAddForm(true)}
+            onClick={openAddModal}
+            disabled={saving}
           >
             + Add Doctor
           </button>
@@ -215,11 +334,12 @@ function DoctorManagement() {
         <div className="search-summary-container">
           <div className="search-container">
             <input
-              type="text"
-              value={search}
-              onChange={handleSearch}
-              placeholder="Search by specialization..."
+              type="search"
               className="search-input"
+              placeholder="Search doctors..."
+              value={search}
+              onChange={handleSearchChange}
+              aria-label="Search doctors"
             />
           </div>
 
@@ -229,370 +349,584 @@ function DoctorManagement() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="state-message">
-            <p>Loading doctors...</p>
+        {pageError && (
+          <div
+            className="form-feedback form-feedback-error"
+            role="alert"
+            style={{ marginBottom: 16 }}
+          >
+            {pageError}
           </div>
-        ) : doctors.length === 0 ? (
-          <div className="state-message">
-            <p>No doctors found.</p>
-          </div>
-        ) : (
-          <DoctorTable
-            doctors={doctors}
-            onView={handleView}
-            onEdit={handleEdit}
-            onDeactivate={handleDeactivate}
-          />
         )}
 
-        {totalPages > 1 && (
-         <div className="pagination">
+        <div className="table-card">
+          {loading ? (
+            <div className="state-message">
+              Loading doctors...
+            </div>
+          ) : doctors.length === 0 ? (
+            <div className="state-message">
+              No doctors found.
+            </div>
+          ) : (
+            <DoctorTable
+              doctors={doctors}
+              onView={handleView}
+              onEdit={handleEdit}
+              onDeactivate={(id: number) => {
+                const doctor = doctors.find(
+                  (item) => item.id === id,
+                );
+
+                if (doctor) {
+                  setDoctorToDeactivate(doctor);
+                }
+              }}
+            />
+          )}
+
+          <div className="pagination">
             <button
+              type="button"
               className="pagination-button"
               onClick={() =>
-                setPage((currentPage) => currentPage - 1)
+                setPage((current) =>
+                  Math.max(1, current - 1),
+                )
               }
-              disabled={page === 1 || loading}
+              disabled={page <= 1 || loading}
             >
               ← Previous
             </button>
 
             <div className="pagination-center">
               <span className="pagination-page">
-                Page {page} of {totalPages}
+                Page {page} of {Math.max(1, totalPages)}
               </span>
+
               <span className="pagination-total">
                 {totalDoctors} doctors
               </span>
             </div>
 
             <button
+              type="button"
               className="pagination-button"
               onClick={() =>
-                setPage((currentPage) => currentPage + 1)
+                setPage((current) =>
+                  Math.min(
+                    Math.max(1, totalPages),
+                    current + 1,
+                  ),
+                )
               }
-              disabled={page === totalPages || loading}
+              disabled={
+                page >= totalPages || loading
+              }
             >
               Next →
             </button>
           </div>
-        )}
-
-        {showAddForm && (
-          <div className="modal-overlay">
-            <div className="modal">
-              <h2>Add Doctor</h2>
-
-              <div className="form-group">
-                <label htmlFor="newName">Name</label>
-                <input
-                  id="newName"
-                  className="form-input"
-                  type="text"
-                  placeholder="Enter doctor name"
-                  value={newName}
-                  onChange={(event) => setNewName(event.target.value)}
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="newEmail">Email</label>
-                <input
-                  id="newEmail"
-                  className="form-input"
-                  type="email"
-                  placeholder="Enter doctor email"
-                  value={newEmail}
-                  onChange={(event) => setNewEmail(event.target.value)}
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="newSpecialization">Specialization</label>
-                <input
-                  id="newSpecialization"
-                  className="form-input"
-                  type="text"
-                  placeholder="e.g. Cardiology"
-                  value={newSpecialization}
-                  onChange={(event) =>
-                    setNewSpecialization(event.target.value)
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="newAvailability">Availability</label>
-                <input
-                  id="newAvailability"
-                  className="form-input"
-                  type="text"
-                  placeholder="e.g. Mon-Fri"
-                  value={newAvailability}
-                  onChange={(event) =>
-                    setNewAvailability(event.target.value)
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  className="secondary-button"
-                  onClick={() => setShowAddForm(false)}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  className="primary-button"
-                  onClick={handleCreateDoctor}
-                  disabled={saving}
-                >
-                  {saving ? 'Saving...' : 'Save Doctor'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {selectedDoctor && (
-          <div className="modal-overlay">
-            <div className="modal doctor-details-modal">
-              <div className="doctor-details-header">
-                <div className="doctor-profile">
-                  <div className="doctor-avatar">
-                    {selectedDoctor.name?.charAt(0).toUpperCase() || 'D'}
-                  </div>
-
-                  <div className="doctor-profile-info">
-                    <span className="doctor-details-eyebrow">
-                      DOCTOR DETAILS
-                    </span>
-
-                    <h2>{selectedDoctor.name || 'Unknown Doctor'}</h2>
-
-                    <p>Doctor ID #{selectedDoctor.id}</p>
-                  </div>
-                </div>
-
-                <button
-                  className="modal-close"
-                  onClick={() => setSelectedDoctor(null)}
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="doctor-status-row">
-                <span
-                  className={`doctor-detail-status ${
-                    selectedDoctor.isActive ? 'active' : 'inactive'
-                  }`}
-                >
-                  <span className="status-dot" />
-                  {selectedDoctor.isActive ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-
-              <div className="doctor-detail-section">
-                <h3>Professional Information</h3>
-
-                <div className="doctor-detail-grid">
-                  <div className="doctor-detail-item">
-                    <span>Doctor ID</span>
-                    <strong>{selectedDoctor.id}</strong>
-                  </div>
-
-                  <div className="doctor-detail-item">
-                    <span>Specialization</span>
-                    <strong>{selectedDoctor.specialization}</strong>
-                  </div>
-
-                  <div className="doctor-detail-item">
-                    <span>Availability</span>
-                    <strong>
-                      {selectedDoctor.availability || 'Not specified'}
-                    </strong>
-                  </div>
-
-                  <div className="doctor-detail-item">
-                    <span>Status</span>
-                    <strong>
-                      {selectedDoctor.isActive ? 'Active' : 'Inactive'}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="doctor-detail-section">
-                <h3>Contact Information</h3>
-
-                <div className="doctor-detail-grid">
-                  <div className="doctor-detail-item doctor-detail-item-full">
-                    <span>Email</span>
-                    <strong>{selectedDoctor.email || 'Not available'}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="doctor-details-footer">
-                <button
-                  className="secondary-button"
-                  onClick={() => setSelectedDoctor(null)}
-                >
-                  Close
-                </button>
-
-                <button
-                  className="primary-button"
-                  onClick={() => {
-                    handleEdit(selectedDoctor);
-                    setSelectedDoctor(null);
-                  }}
-                >
-                  Edit Doctor
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {doctorToDeactivate !== null && (
-          <div className="modal-overlay">
-            <div className="modal confirmation-modal">
-              <h2>Deactivate Doctor</h2>
-
-              <p>
-                Are you sure you want to deactivate this doctor?
-              </p>
-
-              <p className="confirmation-warning">
-                This doctor will no longer be active in the system.
-              </p>
-
-              <div className="modal-actions">
-                <button
-                  className="secondary-button"
-                  onClick={() => setDoctorToDeactivate(null)}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  className="action-button danger"
-                  onClick={confirmDeactivate}
-                  disabled={saving}
-                >
-                  {saving ? 'Deactivating...' : 'Deactivate'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {editingDoctor && (
-          <div className="modal-overlay">
-            <div className="modal">
-              <h2>Edit Doctor</h2>
-
-              <div className="form-group">
-                <label htmlFor="editName">Name</label>
-                <input
-                  id="editName"
-                  className="form-input"
-                  type="text"
-                  value={editingDoctor.name || ''}
-                  onChange={(event) =>
-                    setEditingDoctor({
-                      ...editingDoctor,
-                      name: event.target.value,
-                    })
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="editEmail">Email</label>
-                <input
-                  id="editEmail"
-                  className="form-input"
-                  type="email"
-                  value={editingDoctor.email || ''}
-                  onChange={(event) =>
-                    setEditingDoctor({
-                      ...editingDoctor,
-                      email: event.target.value,
-                    })
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="editSpecialization">Specialization</label>
-                <input
-                  id="editSpecialization"
-                  className="form-input"
-                  type="text"
-                  value={editingDoctor.specialization}
-                  onChange={(event) =>
-                    setEditingDoctor({
-                      ...editingDoctor,
-                      specialization: event.target.value,
-                    })
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="editAvailability">Availability</label>
-                <input
-                  id="editAvailability"
-                  className="form-input"
-                  type="text"
-                  value={editingDoctor.availability || ''}
-                  onChange={(event) =>
-                    setEditingDoctor({
-                      ...editingDoctor,
-                      availability: event.target.value,
-                    })
-                  }
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  className="secondary-button"
-                  onClick={() => setEditingDoctor(null)}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  className="primary-button"
-                  onClick={handleUpdateDoctor}
-                  disabled={saving}
-                >
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
+
+      {showAddForm && (
+        <div className="modal-overlay">
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-doctor-title"
+          >
+            <h2 id="add-doctor-title">
+              Add Doctor
+            </h2>
+
+            <div className="form-group">
+              <label htmlFor="add-doctor-name">
+                Name *
+              </label>
+
+              <input
+                id="add-doctor-name"
+                type="text"
+                className="form-input"
+                value={newName}
+                onChange={(event) => {
+                  setNewName(event.target.value);
+                  setFormErrors((current) => ({
+                    ...current,
+                    name: undefined,
+                    general: undefined,
+                  }));
+                }}
+                disabled={saving}
+                required
+              />
+
+              {formErrors.name && (
+                <p className="field-error" role="alert">
+                  {formErrors.name}
+                </p>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="add-doctor-email">
+                Email *
+              </label>
+
+              <input
+                id="add-doctor-email"
+                type="email"
+                className="form-input"
+                value={newEmail}
+                onChange={(event) => {
+                  setNewEmail(event.target.value);
+                  setFormErrors((current) => ({
+                    ...current,
+                    email: undefined,
+                    general: undefined,
+                  }));
+                }}
+                disabled={saving}
+                required
+              />
+
+              {formErrors.email && (
+                <p className="field-error" role="alert">
+                  {formErrors.email}
+                </p>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="add-doctor-specialization">
+                Specialization *
+              </label>
+
+              <input
+                id="add-doctor-specialization"
+                type="text"
+                className="form-input"
+                value={newSpecialization}
+                onChange={(event) => {
+                  setNewSpecialization(event.target.value);
+                  setFormErrors((current) => ({
+                    ...current,
+                    specialization: undefined,
+                    general: undefined,
+                  }));
+                }}
+                disabled={saving}
+                required
+              />
+
+              {formErrors.specialization && (
+                <p className="field-error" role="alert">
+                  {formErrors.specialization}
+                </p>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="add-doctor-availability">
+                Availability
+              </label>
+
+              <input
+                id="add-doctor-availability"
+                type="text"
+                className="form-input"
+                value={newAvailability}
+                onChange={(event) =>
+                  setNewAvailability(event.target.value)
+                }
+                placeholder="e.g. Mon-Fri, 9 AM-5 PM"
+                disabled={saving}
+              />
+            </div>
+
+            {formErrors.general && (
+              <div
+                className="form-feedback form-feedback-error"
+                role="alert"
+              >
+                {formErrors.general}
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={closeAddModal}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() =>
+                  void handleCreateDoctor()
+                }
+                disabled={saving}
+              >
+                {saving
+                  ? 'Saving...'
+                  : 'Create Doctor'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedDoctor && (
+        <div className="modal-overlay">
+          <div
+            className="modal doctor-details-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="doctor-details-title"
+          >
+            <div className="doctor-details-header">
+              <div className="doctor-profile">
+                <div className="doctor-avatar">
+                  {selectedDoctor.name
+                    ?.charAt(0)
+                    .toUpperCase() || 'D'}
+                </div>
+
+                <div className="doctor-profile-info">
+                  <span className="doctor-details-eyebrow">
+                    DOCTOR PROFILE
+                  </span>
+
+                  <h2 id="doctor-details-title">
+                    {selectedDoctor.name ||
+                      `Doctor #${selectedDoctor.id}`}
+                  </h2>
+
+                  <p>
+                    {selectedDoctor.email}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="doctor-status-row">
+              <span
+                className={`doctor-detail-status ${
+                  selectedDoctor.isActive
+                    ? 'active'
+                    : 'inactive'
+                }`}
+              >
+                <span className="status-dot" />
+
+                {selectedDoctor.isActive
+                  ? 'Active'
+                  : 'Inactive'}
+              </span>
+            </div>
+
+            <div className="doctor-detail-section">
+              <h3>Doctor Information</h3>
+
+              <div className="doctor-detail-grid">
+                <div className="doctor-detail-item">
+                  <span>Doctor ID</span>
+                  <strong>
+                    {selectedDoctor.id}
+                  </strong>
+                </div>
+
+                <div className="doctor-detail-item">
+                  <span>Name</span>
+                  <strong>
+                    {selectedDoctor.name ||
+                      'Not provided'}
+                  </strong>
+                </div>
+
+                <div className="doctor-detail-item">
+                  <span>Email</span>
+                  <strong>
+                    {selectedDoctor.email}
+                  </strong>
+                </div>
+
+                <div className="doctor-detail-item">
+                  <span>Specialization</span>
+                  <strong>
+                    {selectedDoctor.specialization}
+                  </strong>
+                </div>
+
+                <div className="doctor-detail-item doctor-detail-item-full">
+                  <span>Availability</span>
+                  <strong>
+                    {selectedDoctor.availability ||
+                      'Not specified'}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="doctor-details-footer">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() =>
+                  setSelectedDoctor(null)
+                }
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingDoctor && (
+        <div className="modal-overlay">
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-doctor-title"
+          >
+            <h2 id="edit-doctor-title">
+              Edit Doctor
+            </h2>
+
+            <div className="form-group">
+              <label htmlFor="edit-doctor-name">
+                Name *
+              </label>
+
+              <input
+                id="edit-doctor-name"
+                type="text"
+                className="form-input"
+                value={editingDoctor.name}
+                onChange={(event) => {
+                  setEditingDoctor({
+                    ...editingDoctor,
+                    name: event.target.value,
+                  });
+
+                  setFormErrors((current) => ({
+                    ...current,
+                    name: undefined,
+                    general: undefined,
+                  }));
+                }}
+                disabled={saving}
+                required
+              />
+
+              {formErrors.name && (
+                <p className="field-error" role="alert">
+                  {formErrors.name}
+                </p>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="edit-doctor-email">
+                Email *
+              </label>
+
+              <input
+                id="edit-doctor-email"
+                type="email"
+                className="form-input"
+                value={editingDoctor.email}
+                onChange={(event) => {
+                  setEditingDoctor({
+                    ...editingDoctor,
+                    email: event.target.value,
+                  });
+
+                  setFormErrors((current) => ({
+                    ...current,
+                    email: undefined,
+                    general: undefined,
+                  }));
+                }}
+                disabled={saving}
+                required
+              />
+
+              {formErrors.email && (
+                <p className="field-error" role="alert">
+                  {formErrors.email}
+                </p>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="edit-doctor-specialization">
+                Specialization *
+              </label>
+
+              <input
+                id="edit-doctor-specialization"
+                type="text"
+                className="form-input"
+                value={editingDoctor.specialization}
+                onChange={(event) => {
+                  setEditingDoctor({
+                    ...editingDoctor,
+                    specialization: event.target.value,
+                  });
+
+                  setFormErrors((current) => ({
+                    ...current,
+                    specialization: undefined,
+                    general: undefined,
+                  }));
+                }}
+                disabled={saving}
+                required
+              />
+
+              {formErrors.specialization && (
+                <p className="field-error" role="alert">
+                  {formErrors.specialization}
+                </p>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="edit-doctor-availability">
+                Availability
+              </label>
+
+              <input
+                id="edit-doctor-availability"
+                type="text"
+                className="form-input"
+                value={
+                  editingDoctor.availability ?? ''
+                }
+                onChange={(event) =>
+                  setEditingDoctor({
+                    ...editingDoctor,
+                    availability:
+                      event.target.value,
+                  })
+                }
+                disabled={saving}
+              />
+            </div>
+
+            {formErrors.general && (
+              <div
+                className="form-feedback form-feedback-error"
+                role="alert"
+              >
+                {formErrors.general}
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={closeEditModal}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() =>
+                  void handleUpdateDoctor()
+                }
+                disabled={saving}
+              >
+                {saving
+                  ? 'Saving...'
+                  : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+{doctorToDeactivate && (
+  <div className="modal-overlay">
+    <div
+      className="confirmation-modal doctor-deactivate-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="deactivate-doctor-title"
+    >
+      <div className="doctor-deactivate-icon">
+        !
+      </div>
+
+      <span className="doctor-deactivate-eyebrow">
+        DOCTOR STATUS
+      </span>
+
+      <h2 id="deactivate-doctor-title">
+        Deactivate Doctor
+      </h2>
+
+      <p className="doctor-deactivate-description">
+        This action will change the doctor's status
+        to inactive.
+      </p>
+
+      <div className="doctor-deactivate-profile">
+        <div className="doctor-deactivate-avatar">
+          {doctorToDeactivate.name
+            ?.charAt(0)
+            .toUpperCase() || 'D'}
+        </div>
+
+        <div className="doctor-deactivate-info">
+          <strong>
+            {doctorToDeactivate.name ||
+              `Doctor #${doctorToDeactivate.id}`}
+          </strong>
+
+          <span>
+            Doctor ID #{doctorToDeactivate.id}
+          </span>
+        </div>
+      </div>
+
+      <div className="doctor-deactivate-actions">
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => setDoctorToDeactivate(null)}
+          disabled={saving}
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          className="doctor-deactivate-button"
+          onClick={() => void handleDeactivateDoctor()}
+          disabled={saving}
+        >
+          {saving ? 'Deactivating...' : 'Deactivate'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
-
-export default DoctorManagement;

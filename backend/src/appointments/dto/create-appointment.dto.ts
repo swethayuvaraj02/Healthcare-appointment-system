@@ -1,4 +1,10 @@
-import { IsDateString, IsIn, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateAppointmentDto {
   @IsInt()
@@ -9,16 +15,6 @@ export class CreateAppointmentDto {
 
   @IsDateString()
   appointmentAt: string;
-
-  @IsIn([
-    'SCHEDULED',
-    'CONFIRMED',
-    'COMPLETED',
-    'CANCELLED',
-    'NO_SHOW',
-  ])
-  @IsOptional()
-  status?: string;
 
   @IsString()
   @IsOptional()

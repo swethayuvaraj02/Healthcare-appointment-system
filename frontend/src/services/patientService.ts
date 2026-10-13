@@ -1,4 +1,4 @@
-﻿import api from './api';
+import api from './api';
 
 const API_URL = '/patients';
 
@@ -29,7 +29,7 @@ export interface PatientListResponse {
 export const getPatients = async (
   search?: string,
   page = 1,
-  limit = 5,
+  limit = 10,
 ): Promise<PatientListResponse> => {
   const response = await api.get(API_URL, {
     params: {
