@@ -8,10 +8,10 @@ async function bootstrap() {
 
   
 app.enableCors({
-  origin: [
-    'http://localhost:5173',
-    'https://healthcare-appointment-system-chi.vercel.app',
-  ],
+  origin: true,
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+  allowedHeaders: 'Content-Type, Authorization',
+  credentials: true,
 });
 
   app.setGlobalPrefix('api/v1');
