@@ -7,11 +7,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'https://healthcare-appointment-frontend-pi.vercel.app',
-    ],
-  });
+  origin: [
+    'http://localhost:5173',
+    'https://healthcare-appointment-system-6te99jw3m.vercel.app',
+  ],
+});
 
   app.setGlobalPrefix('api/v1');
 
