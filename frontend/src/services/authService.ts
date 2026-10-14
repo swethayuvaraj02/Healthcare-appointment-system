@@ -29,7 +29,7 @@ export const login = async (
   credentials: LoginRequest,
 ): Promise<LoginResponse> => {
   const response = await axios.post<LoginResponse>(
-    `${API_URL}/login`,
+    `${API_URL}/auth/login`,
     credentials,
   );
 
