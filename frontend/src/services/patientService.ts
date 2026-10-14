@@ -97,3 +97,9 @@ export const deactivatePatient = async (
 
   return response.data;
 };
+
+
+export const activatePatient = async (id: number): Promise<Patient> => {
+  const response = await api.post(`${API_URL}/${id}/activate`);
+  return response.data;
+};

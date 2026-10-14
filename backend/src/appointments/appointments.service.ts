@@ -6,7 +6,6 @@ import {
 import { db } from '../prisma/db.js';
 import { CreateAppointmentDto } from './dto/create-appointment.dto.js';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto.js';
-import { Cron, CronExpression } from '@nestjs/schedule';
 
 type AppointmentStatus =
   | 'SCHEDULED'
@@ -124,10 +123,10 @@ export class AppointmentsService {
   });
 
   filteredAppointments = filteredAppointments.sort(
-    (a, b) =>
-      new Date(a.appointmentAt).getTime() -
-      new Date(b.appointmentAt).getTime(),
-  );
+  (a, b) =>
+    new Date(b.createdAt).getTime() -
+    new Date(a.createdAt).getTime(),
+);
 
   const total = filteredAppointments.length;
   const totalPages = Math.ceil(total / limit);
@@ -158,10 +157,11 @@ export class AppointmentsService {
       throw new NotFoundException('Appointment not found');
     }
 
-    if (
-      appointment.status === 'COMPLETED' ||
-      appointment.status === 'CANCELLED'
-    ) {
+   if (
+  appointment.status === 'COMPLETED' ||
+  appointment.status === 'CANCELLED' ||
+  appointment.status === 'NO_SHOW'
+) {
       throw new BadRequestException(
         'Completed or cancelled appointments cannot be edited',
       );
@@ -171,6 +171,34 @@ export class AppointmentsService {
     const doctorId = dto.doctorId ?? appointment.doctorId;
     const appointmentAt =
       dto.appointmentAt ?? appointment.appointmentAt;
+
+      const status = dto.status ?? appointment.status;
+
+const allowedStatuses = [
+  'SCHEDULED',
+  'CONFIRMED',
+  'COMPLETED',
+  'CANCELLED',
+  'NO_SHOW',
+];
+
+if (!allowedStatuses.includes(status)) {
+  throw new BadRequestException('Invalid appointment status');
+}
+
+const allowedTransitions: Record<string, string[]> = {
+  SCHEDULED: ['SCHEDULED', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'],
+  CONFIRMED: ['CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'],
+  COMPLETED: [],
+  CANCELLED: [],
+  NO_SHOW: [],
+};
+
+if (!allowedTransitions[appointment.status]?.includes(status)) {
+  throw new BadRequestException(
+    `Cannot change appointment status from ${appointment.status} to ${status}`,
+  );
+}
 
     const patient = await db.orm.public.Patient
       .where({ id: patientId })
@@ -236,11 +264,12 @@ export class AppointmentsService {
     return db.orm.public.Appointment
       .where({ id: dto.id })
       .update({
-        patientId,
-        doctorId,
-        appointmentAt: parsedAppointmentAt.toISOString(),
-        reason: dto.reason ?? appointment.reason,
-      });
+  patientId,
+  doctorId,
+  appointmentAt: parsedAppointmentAt.toISOString(),
+  status,
+  reason: dto.reason ?? appointment.reason,
+});
   }
   
   async markCompleted(id: number) {
@@ -264,41 +293,7 @@ export class AppointmentsService {
         status: 'COMPLETED',
       });
   }
-
-
-  @Cron(CronExpression.EVERY_MINUTE)
-  async cancelOverdueAppointments() {
-    const appointments = await db.orm.public.Appointment.all();
-
-    console.log(
-  '[Scheduler] Checking appointments:',
-  appointments.map((a) => ({
-    id: a.id,
-    status: a.status,
-    appointmentAt: a.appointmentAt,
-  })),
-);
-
-    const cutoff = Date.now() - 5 * 60 * 1000;
-
-    console.log('[Scheduler] Current time:', new Date().toISOString());
-console.log('[Scheduler] Cutoff time:', new Date(cutoff).toISOString());
-
-    for (const appointment of appointments) {
-      const appointmentTime = new Date(
-        appointment.appointmentAt,
-      ).getTime();
-
-      if (
-        appointment.status === 'SCHEDULED' &&
-        Number.isFinite(appointmentTime) &&
-        appointmentTime <= cutoff
-      ) {
-        await db.orm.public.Appointment
-          .where({ id: appointment.id })
-          .update({ status: 'CANCELLED' });
-          
-      }
-    }
-  }
 }
+
+
+  

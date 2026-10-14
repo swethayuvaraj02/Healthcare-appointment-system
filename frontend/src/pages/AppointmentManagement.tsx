@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from 'react';
 import AppointmentTable from '../components/AppointmentTable';
 import {
@@ -84,6 +83,7 @@ function AppointmentManagement() {
   const [doctorId, setDoctorId] = useState('');
   const [appointmentAt, setAppointmentAt] = useState('');
   const [reason, setReason] = useState('');
+  const [status, setStatus] = useState('SCHEDULED');
 
   const resetForm = () => {
     setPatientId('');
@@ -214,7 +214,12 @@ function AppointmentManagement() {
       if (Number.isNaN(selectedDate.getTime())) {
         errors.appointmentAt =
           'Please enter a valid appointment date and time.';
-      } else if (selectedDate <= new Date()) {
+      } else if (
+        selectedDate <= new Date() &&
+        (!editingAppointment ||
+          appointmentAt !==
+            toLocalDateTimeValue(new Date(editingAppointment.appointmentAt)))
+      ) {
         errors.appointmentAt =
           'Appointment date and time must be in the future.';
       }
@@ -274,7 +279,7 @@ const handleCreateAppointment = async () => {
         Number(patientId),
         Number(doctorId),
         appointmentAt,
-        editingAppointment.status,
+        status,
         reason.trim(),
       );
 
@@ -303,6 +308,7 @@ const handleCreateAppointment = async () => {
     );
 
     setReason(appointment.reason || '');
+    setStatus(appointment.status);
     setFormErrors({});
   };
 
@@ -373,8 +379,8 @@ const handleCreateAppointment = async () => {
         <div className="filter-container">
           <span className="filter-label">Filter by status</span>
 
-          <select
-            className="filter-select"
+         <select
+  className="appointment-filter-select"
             value={filterStatus}
             onChange={(event) => {
               setFilterStatus(event.target.value);
@@ -909,6 +915,46 @@ const handleCreateAppointment = async () => {
                   disabled={saving}
                 />
               </div>
+
+              <div className="form-group appointment-status-field">
+  <label htmlFor="edit-appointment-status">Status</label>
+
+  <select
+    id="edit-appointment-status"
+    className="appointment-status-select"
+    value={status}
+    onChange={(event) => setStatus(event.target.value)}
+    disabled={saving}
+  >
+    {editingAppointment.status === 'SCHEDULED' && (
+      <option value="SCHEDULED">Scheduled</option>
+    )}
+
+    {editingAppointment.status === 'CONFIRMED' && (
+      <option value="CONFIRMED">Confirmed</option>
+    )}
+
+    {['SCHEDULED', 'CONFIRMED'].includes(editingAppointment.status) && (
+      <>
+        {editingAppointment.status === 'SCHEDULED' && (
+          <option value="CONFIRMED">Confirmed</option>
+        )}
+
+        <option value="COMPLETED">Completed</option>
+        <option value="CANCELLED">Cancelled</option>
+        <option value="NO_SHOW">No Show</option>
+      </>
+    )}
+
+    {['COMPLETED', 'CANCELLED', 'NO_SHOW'].includes(
+      editingAppointment.status,
+    ) && (
+      <option value={editingAppointment.status}>
+        {editingAppointment.status.replace('_', ' ')}
+      </option>
+    )}
+  </select>
+</div>
 
               {formErrors.general && (
                 <div

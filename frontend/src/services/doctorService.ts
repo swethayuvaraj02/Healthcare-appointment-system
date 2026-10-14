@@ -85,3 +85,9 @@ export const deactivateDoctor = async (id: number): Promise<Doctor> => {
 
   return response.data;
 };
+
+export const activateDoctor = async (id: number): Promise<Doctor> => {
+  const response = await api.post(`${API_URL}/${id}/activate`);
+  return response.data;
+};
+

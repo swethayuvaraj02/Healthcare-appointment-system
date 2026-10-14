@@ -1,4 +1,3 @@
-
 import {
   useCallback,
   useEffect,
@@ -9,6 +8,7 @@ import {
 import DoctorTable from '../components/DoctorTable';
 
 import {
+  activateDoctor,
   createDoctor,
   deactivateDoctor,
   getDoctor,
@@ -16,7 +16,6 @@ import {
   updateDoctor,
   type Doctor,
 } from '../services/doctorService';
-
 import './DoctorManagement.css';
 
 const PAGE_SIZE = 10;
@@ -278,27 +277,28 @@ export default function DoctorManagement() {
   };
 
   const handleDeactivateDoctor = async () => {
-    if (!doctorToDeactivate) {
-      return;
-    }
+  if (!doctorToDeactivate) return;
 
-    try {
-      setSaving(true);
+  try {
+    setSaving(true);
 
+    if (doctorToDeactivate.isActive) {
       await deactivateDoctor(doctorToDeactivate.id);
-
-      setDoctorToDeactivate(null);
-      setSelectedDoctor(null);
-
-      await loadDoctors();
-    } catch (error) {
-      console.error('Failed to deactivate doctor:', error);
-
-      setPageError(getErrorMessage(error));
-    } finally {
-      setSaving(false);
+    } else {
+      await activateDoctor(doctorToDeactivate.id);
     }
-  };
+
+    setDoctorToDeactivate(null);
+    setSelectedDoctor(null);
+
+    await loadDoctors();
+  } catch (error) {
+    console.error('Failed to update doctor status:', error);
+    setPageError(getErrorMessage(error));
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleEdit = (doctor: Doctor) => {
     setEditingDoctor({ ...doctor });
@@ -863,7 +863,9 @@ export default function DoctorManagement() {
 {doctorToDeactivate && (
   <div className="modal-overlay">
     <div
-      className="confirmation-modal doctor-deactivate-modal"
+      className={`confirmation-modal doctor-deactivate-modal ${
+  doctorToDeactivate.isActive ? '' : 'doctor-activate-modal'
+}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="deactivate-doctor-title"
@@ -876,14 +878,17 @@ export default function DoctorManagement() {
         DOCTOR STATUS
       </span>
 
-      <h2 id="deactivate-doctor-title">
-        Deactivate Doctor
-      </h2>
+     <h2 id="deactivate-doctor-title">
+  {doctorToDeactivate.isActive
+    ? 'Deactivate Doctor'
+    : 'Activate Doctor'}
+</h2>
 
       <p className="doctor-deactivate-description">
-        This action will change the doctor's status
-        to inactive.
-      </p>
+  {doctorToDeactivate.isActive
+    ? "Are you sure you want to deactivate this doctor?"
+    : "Are you sure you want to reactivate this doctor?"}
+</p>
 
       <div className="doctor-deactivate-profile">
         <div className="doctor-deactivate-avatar">
@@ -920,7 +925,13 @@ export default function DoctorManagement() {
           onClick={() => void handleDeactivateDoctor()}
           disabled={saving}
         >
-          {saving ? 'Deactivating...' : 'Deactivate'}
+         {saving
+  ? doctorToDeactivate.isActive
+    ? 'Deactivating...'
+    : 'Activating...'
+  : doctorToDeactivate.isActive
+    ? 'Deactivate'
+    : 'Activate'}
         </button>
       </div>
     </div>

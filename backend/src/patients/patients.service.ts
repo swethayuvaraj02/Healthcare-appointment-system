@@ -56,6 +56,20 @@ export class PatientsService {
     });
   }
 
+  async activatePatient(id: number) {
+  const patient = await db.orm.public.Patient
+    .where({ id })
+    .first();
+
+  if (!patient) {
+    throw new NotFoundException('Patient not found');
+  }
+
+  return db.orm.public.Patient
+    .where({ id })
+    .update({ isActive: true });
+}
+
   async findOne(id: number) {
     const patient = await db.orm.public.Patient.where({ id }).first();
 
@@ -66,7 +80,7 @@ export class PatientsService {
     return patient;
   }
 
-  async findAll(search?: string, page = 1, limit = 5) {
+  async findAll(search?: string, page = 1, limit = 10) {
   const patients = await db.orm.public.Patient.all();
 
   let filteredPatients = patients;

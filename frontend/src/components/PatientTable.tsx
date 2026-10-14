@@ -31,16 +31,10 @@ function PatientTable({
         <tbody>
           {patients.map((patient) => (
             <tr key={patient.id}>
-
               <td>{patient.name}</td>
-
               <td>{patient.gender}</td>
-
               <td>{patient.phone}</td>
-
-              <td>
-                {patient.email || 'Not provided'}
-              </td>
+              <td>{patient.email || 'Not provided'}</td>
 
               <td>
                 <span
@@ -50,37 +44,39 @@ function PatientTable({
                       : 'status-inactive'
                   }`}
                 >
-                  {patient.isActive
-                    ? 'Active'
-                    : 'Inactive'}
+                  {patient.isActive ? 'Active' : 'Inactive'}
                 </span>
               </td>
 
               <td>
-  <div className="action-buttons">
-    <button
-      className="action-button"
-      onClick={() => onView(patient.id)}
-    >
-      View
-    </button>
+                <div className="action-buttons">
+                  <button
+                    type="button"
+                    className="action-button"
+                    onClick={() => onView(patient.id)}
+                  >
+                    View
+                  </button>
 
-    <button
-      className="action-button"
-      onClick={() => onEdit(patient)}
-    >
-      Edit
-    </button>
+                  <button
+                    type="button"
+                    className="action-button"
+                    onClick={() => onEdit(patient)}
+                  >
+                    Edit
+                  </button>
 
-    <button
-      className="action-button danger"
-      onClick={() => onDeactivate(patient)}
-      disabled={!patient.isActive}
-    >
-      Deactivate
-    </button>
-  </div>
-</td>
+                  <button
+                    type="button"
+                    className={`action-button ${
+                      patient.isActive ? 'danger' : ''
+                    }`}
+                    onClick={() => onDeactivate(patient)}
+                  >
+                    {patient.isActive ? 'Deactivate' : 'Activate'}
+                  </button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>

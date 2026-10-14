@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useState, type ChangeEvent } from 'react';
-import PatientTable from '../components/PatientTable';
 import {
+  useCallback,
+  useEffect,
+  useState,
+  type ChangeEvent,
+} from 'react';
+
+import PatientTable from '../components/PatientTable';
+
+import {
+  activatePatient,
   createPatient,
   deactivatePatient,
   getPatients,
@@ -14,10 +22,12 @@ function PatientManagement() {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(
-    null,
-  );
-  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [selectedPatient, setSelectedPatient] =
+    useState<Patient | null>(null);
+
+  const [editingPatient, setEditingPatient] =
+    useState<Patient | null>(null);
+
   const [deactivatingPatient, setDeactivatingPatient] =
     useState<Patient | null>(null);
 
@@ -54,19 +64,18 @@ function PatientManagement() {
   };
 
   const loadPatients = useCallback(async () => {
-  try {
-    const data = await getPatients(search, page, PAGE_SIZE);
+    try {
+      const data = await getPatients(search, page, PAGE_SIZE);
 
-    setPatients(data.data);
-    setTotalPages(data.pagination.totalPages);
-    setTotalPatients(data.pagination.total);
-  } catch (error) {
-    console.error('Failed to fetch patients:', error);
-  } finally {
-    setLoading(false);
-    setSaving(false);
-  }
-}, [search, page]);
+      setPatients(data.data);
+      setTotalPages(data.pagination.totalPages);
+      setTotalPatients(data.pagination.total);
+    } catch (error) {
+      console.error('Failed to fetch patients:', error);
+    } finally {
+  setLoading(false);
+}
+  }, [search, page]);
 
   const handleView = (id: number) => {
     const patient = patients.find((item) => item.id === id);
@@ -101,15 +110,21 @@ function PatientManagement() {
     try {
       setSaving(true);
 
-      await deactivatePatient(deactivatingPatient.id);
+      if (deactivatingPatient.isActive) {
+        await deactivatePatient(deactivatingPatient.id);
+      } else {
+        await activatePatient(deactivatingPatient.id);
+      }
 
       await loadPatients();
-
       setDeactivatingPatient(null);
     } catch (error) {
-      console.error('Failed to deactivate patient:', error);
+      console.error('Failed to update patient status:', error);
+      window.alert(
+        'Unable to update patient status. Please try again.',
+      );
+    } finally {
       setSaving(false);
-      window.alert('Unable to deactivate patient. Please try again.');
     }
   };
 
@@ -184,6 +199,8 @@ function PatientManagement() {
       console.error('Failed to save patient:', error);
       setFormError('Unable to save patient. Please try again.');
       setSaving(false);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -216,9 +233,13 @@ function PatientManagement() {
       <div className="patient-container">
         <div className="patient-header">
           <div className="patient-heading">
-            <span className="page-eyebrow">PATIENT MANAGEMENT</span>
+            <span className="page-eyebrow">
+              PATIENT MANAGEMENT
+            </span>
             <h1>Patients</h1>
-            <p>Manage patient records, contact information, and status.</p>
+            <p>
+              Manage patient records, contact information, and status.
+            </p>
           </div>
 
           <button
@@ -256,7 +277,9 @@ function PatientManagement() {
           </div>
 
           <div className="patient-summary">
-            <span className="patient-summary-label">Total patients</span>
+            <span className="patient-summary-label">
+              Total patients
+            </span>
             <strong>{totalPatients}</strong>
           </div>
         </div>
@@ -337,7 +360,9 @@ function PatientManagement() {
                   </div>
 
                   <div>
-                    <span className="modal-eyebrow">PATIENT DETAILS</span>
+                    <span className="modal-eyebrow">
+                      PATIENT DETAILS
+                    </span>
                     <h2>{selectedPatient.name}</h2>
                     <p>Patient ID #{selectedPatient.id}</p>
                   </div>
@@ -370,7 +395,9 @@ function PatientManagement() {
 
                 <div className="details-grid">
                   <div className="details-item">
-                    <span className="details-label">Date of Birth</span>
+                    <span className="details-label">
+                      Date of Birth
+                    </span>
                     <span className="details-value">
                       {new Date(
                         selectedPatient.dateOfBirth,
@@ -379,7 +406,9 @@ function PatientManagement() {
                   </div>
 
                   <div className="details-item">
-                    <span className="details-label">Gender</span>
+                    <span className="details-label">
+                      Gender
+                    </span>
                     <span className="details-value">
                       {selectedPatient.gender}
                     </span>
@@ -392,21 +421,27 @@ function PatientManagement() {
 
                 <div className="details-grid">
                   <div className="details-item">
-                    <span className="details-label">Phone</span>
+                    <span className="details-label">
+                      Phone
+                    </span>
                     <span className="details-value">
                       {selectedPatient.phone}
                     </span>
                   </div>
 
                   <div className="details-item">
-                    <span className="details-label">Email</span>
+                    <span className="details-label">
+                      Email
+                    </span>
                     <span className="details-value">
                       {selectedPatient.email || 'Not provided'}
                     </span>
                   </div>
 
                   <div className="details-item details-item-full">
-                    <span className="details-label">Address</span>
+                    <span className="details-label">
+                      Address
+                    </span>
                     <span className="details-value">
                       {selectedPatient.address || 'Not provided'}
                     </span>
@@ -485,7 +520,9 @@ function PatientManagement() {
 
                   <div className="form-grid">
                     <div className="form-group form-group-full">
-                      <label htmlFor="name">Full Name</label>
+                      <label htmlFor="name">
+                        Full Name
+                      </label>
 
                       <input
                         id="name"
@@ -518,7 +555,9 @@ function PatientManagement() {
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="gender">Gender</label>
+                      <label htmlFor="gender">
+                        Gender
+                      </label>
 
                       <select
                         id="gender"
@@ -529,7 +568,9 @@ function PatientManagement() {
                         required
                         disabled={saving}
                       >
-                        <option value="">Select gender</option>
+                        <option value="">
+                          Select gender
+                        </option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                         <option value="Other">Other</option>
@@ -543,7 +584,9 @@ function PatientManagement() {
 
                   <div className="form-grid">
                     <div className="form-group">
-                      <label htmlFor="phone">Phone</label>
+                      <label htmlFor="phone">
+                        Phone
+                      </label>
 
                       <input
                         id="phone"
@@ -559,7 +602,9 @@ function PatientManagement() {
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="email">Email</label>
+                      <label htmlFor="email">
+                        Email
+                      </label>
 
                       <input
                         id="email"
@@ -574,7 +619,9 @@ function PatientManagement() {
                     </div>
 
                     <div className="form-group form-group-full">
-                      <label htmlFor="address">Address</label>
+                      <label htmlFor="address">
+                        Address
+                      </label>
 
                       <textarea
                         id="address"
@@ -609,7 +656,9 @@ function PatientManagement() {
                 </div>
 
                 {formError && (
-                  <p className="form-error">{formError}</p>
+                  <p className="form-error">
+                    {formError}
+                  </p>
                 )}
 
                 <div className="modal-actions">
@@ -641,16 +690,29 @@ function PatientManagement() {
 
         {deactivatingPatient && (
           <div className="modal-overlay">
-            <div className="confirmation-modal">
+            <div
+  className={`confirmation-modal ${
+    deactivatingPatient.isActive ? '' : 'patient-activate-modal'
+  }`}
+>
               <div className="confirmation-icon">!</div>
 
               <div className="modal-header">
                 <div>
-                  <span className="modal-eyebrow">PATIENT STATUS</span>
-                  <h2>Deactivate Patient</h2>
+                  <span className="modal-eyebrow">
+                    PATIENT STATUS
+                  </span>
+
+                  <h2>
+                    {deactivatingPatient.isActive
+                      ? 'Deactivate Patient'
+                      : 'Activate Patient'}
+                  </h2>
+
                   <p>
-                    This action will change the patient's status to
-                    inactive.
+                    {deactivatingPatient.isActive
+                      ? 'Are you sure you want to deactivate this patient?'
+                      : 'Are you sure you want to reactivate this patient?'}
                   </p>
                 </div>
 
@@ -670,7 +732,9 @@ function PatientManagement() {
                 </div>
 
                 <div>
-                  <strong>{deactivatingPatient.name}</strong>
+                  <strong>
+                    {deactivatingPatient.name}
+                  </strong>
                   <span>
                     Patient ID #{deactivatingPatient.id}
                   </span>
@@ -689,11 +753,21 @@ function PatientManagement() {
 
                 <button
                   type="button"
-                  className="danger-button"
-                  onClick={handleDeactivate}
+                  className={
+                    deactivatingPatient.isActive
+                      ? 'danger-button'
+                      : 'primary-button'
+                  }
+                  onClick={() => void handleDeactivate()}
                   disabled={saving}
                 >
-                  {saving ? 'Deactivating...' : 'Deactivate'}
+                  {saving
+                    ? deactivatingPatient.isActive
+                      ? 'Deactivating...'
+                      : 'Activating...'
+                    : deactivatingPatient.isActive
+                      ? 'Deactivate'
+                      : 'Activate'}
                 </button>
               </div>
             </div>

@@ -1,4 +1,3 @@
-
 import type { Doctor } from '../services/doctorService';
 import '../pages/DoctorManagement.css';
 
@@ -38,9 +37,7 @@ export default function DoctorTable({
 
             <td>{doctor.specialization}</td>
 
-            <td>
-              {doctor.availability || 'Not specified'}
-            </td>
+            <td>{doctor.availability || 'Not specified'}</td>
 
             <td>
               <span
@@ -74,11 +71,12 @@ export default function DoctorTable({
 
                 <button
                   type="button"
-                  className="action-button danger"
+                  className={`action-button ${
+                    doctor.isActive ? 'danger' : ''
+                  }`}
                   onClick={() => onDeactivate(doctor.id)}
-                  disabled={!doctor.isActive}
                 >
-                  Deactivate
+                  {doctor.isActive ? 'Deactivate' : 'Activate'}
                 </button>
               </div>
             </td>

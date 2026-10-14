@@ -386,6 +386,11 @@
   animation: patient-spin 0.75s linear infinite;
 }
 
+.patient-activate-modal .confirmation-icon {
+  background-color: #e2f3f0;
+  color: #0f766e;
+}
+
 @keyframes patient-spin {
   to {
     transform: rotate(360deg);

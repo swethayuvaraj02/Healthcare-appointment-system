@@ -32,6 +32,12 @@ deactivate(@Body() deactivateDoctorDto: DeactivateDoctorDto) {
   return this.doctorsService.deactivateDoctor(deactivateDoctorDto);
 }
 
+@Roles('ADMIN', 'STAFF')
+@Post(':id/activate')
+activate(@Param('id') id: string) {
+  return this.doctorsService.activateDoctor(Number(id));
+}
+
 @Get(':id')
 findOne(@Param('id') id: string) {
   return this.doctorsService.findOne(Number(id));
@@ -41,7 +47,7 @@ findOne(@Param('id') id: string) {
 findAll(
   @Query('search') search?: string,
   @Query('page') page = '1',
-  @Query('limit') limit = '5',
+  @Query('limit') limit = '10',
 ) {
   return this.doctorsService.findAll(
     search,

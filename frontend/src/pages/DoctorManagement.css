@@ -329,6 +329,32 @@
   cursor: not-allowed;
 }
 
+/* View, Edit and Activate — teal */
+.doctor-page .doctor-table .action-button:not(.danger) {
+  color: #147d78;
+  border-color: #e0e9e7;
+  background-color: #ffffff;
+}
+
+.doctor-page .doctor-table .action-button:not(.danger):hover:not(:disabled) {
+  color: #106762;
+  border-color: #147d78;
+  background-color: #e2f3f0;
+}
+
+/* Deactivate — red */
+.doctor-page .doctor-table .action-button.danger {
+  color: #c24141;
+  border-color: #f3cccc;
+  background-color: #ffffff;
+}
+
+.doctor-page .doctor-table .action-button.danger:hover:not(:disabled) {
+  color: #a52f2f;
+  border-color: #c24141;
+  background-color: #fceaea;
+}
+
 .doctor-page .state-message {
   display: flex;
   align-items: center;
@@ -852,7 +878,21 @@
   cursor: not-allowed;
 }
 
+.doctor-activate-modal .doctor-deactivate-icon {
+  background-color: #e2f3f0;
+  color: #0f766e;
+}
 
+.doctor-activate-modal .doctor-deactivate-button {
+  background-color: #0f766e;
+  border-color: #0f766e;
+  color: #ffffff;
+}
+
+.doctor-activate-modal .doctor-deactivate-button:hover:not(:disabled) {
+  background-color: #115e59;
+  border-color: #115e59;
+}
 
 @media (max-width: 480px) {
   .doctor-page .doctor-deactivate-modal {

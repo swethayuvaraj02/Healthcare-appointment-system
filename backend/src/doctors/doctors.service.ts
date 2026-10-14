@@ -72,6 +72,21 @@ export class DoctorsService {
       .update({ isActive: false });
   }
 
+
+  async activateDoctor(id: number) {
+  const doctor = await db.orm.public.Doctor
+    .where({ id })
+    .first();
+
+  if (!doctor) {
+    throw new NotFoundException('Doctor not found');
+  }
+
+  return db.orm.public.Doctor
+    .where({ id })
+    .update({ isActive: true });
+}
+
   async findOne(id: number) {
     const doctor = await db.orm.public.Doctor
       .where({ id })
@@ -84,7 +99,7 @@ export class DoctorsService {
     return doctor;
   }
 
-  async findAll(search?: string, page = 1, limit = 5) {
+  async findAll(search?: string, page = 1, limit = 10) {
     const doctors = await db.orm.public.Doctor.all();
 
     let filteredDoctors = doctors;

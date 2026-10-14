@@ -33,11 +33,17 @@ update(@Body() updatePatientDto: UpdatePatientDto) {
     return this.patientsService.deactivatePatient(deactivatePatientsDto);
   }
 
+  @Roles('ADMIN', 'STAFF')
+@Post(':id/activate')
+activate(@Param('id') id: string) {
+  return this.patientsService.activatePatient(Number(id));
+}
+
   @Get()
 findAll(
   @Query('search') search?: string,
   @Query('page') page = '1',
-  @Query('limit') limit = '5',
+  @Query('limit') limit = '10',
 ) {
   return this.patientsService.findAll(
     search,

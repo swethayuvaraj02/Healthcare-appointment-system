@@ -63,7 +63,14 @@ function AppointmentTable({
                 )}
               </td>
 
-              <td>{appointment.reason || 'Not provided'}</td>
+              <td>
+  <span
+    className="appointment-reason"
+    title={appointment.reason || 'Not provided'}
+  >
+    {appointment.reason || 'Not provided'}
+  </span>
+</td>
 
               <td>
                 <span
